@@ -273,6 +273,12 @@ constructor(
                                     supportedDeviceTypes = listOf(DeviceType.PHONE),
                                     backendPreference = appPreferences.playerGesturesStartMaximized,
                                 ),
+                                PreferenceSwitch(
+                                    nameStringResource = R.string.player_start_in_portrait,
+                                    descriptionStringRes = R.string.player_start_in_portrait_summary,
+                                    supportedDeviceTypes = listOf(DeviceType.PHONE),
+                                    backendPreference = appPreferences.playerStartInPortrait,
+                                ),
                             ),
                         ),
                         PreferenceGroup(

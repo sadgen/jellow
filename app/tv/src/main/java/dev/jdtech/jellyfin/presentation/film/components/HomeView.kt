@@ -37,7 +37,7 @@ fun HomeView(
         )
         Spacer(modifier = Modifier.height(MaterialTheme.spacings.medium))
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
             contentPadding = itemsPadding,
         ) {
             items(view.view.items, key = { it.id }) { item ->
@@ -47,6 +47,9 @@ fun HomeView(
                     onClick = {
                         onAction(HomeAction.OnItemClick(it))
                     },
+                    onPlayClick = {
+                        onAction(HomeAction.OnPlayClick(it))
+                    }
                 )
             }
         }

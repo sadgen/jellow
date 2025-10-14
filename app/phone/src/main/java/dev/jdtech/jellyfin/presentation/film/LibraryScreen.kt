@@ -1,5 +1,6 @@
 package dev.jdtech.jellyfin.presentation.film
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -29,6 +30,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
@@ -39,6 +41,7 @@ import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
+import dev.jdtech.jellyfin.PlayerActivity
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyMovies
 import dev.jdtech.jellyfin.film.presentation.library.LibraryAction
 import dev.jdtech.jellyfin.film.presentation.library.LibraryState
@@ -56,6 +59,7 @@ import dev.jdtech.jellyfin.presentation.utils.GridCellsAdaptiveWithMinColumns
 import dev.jdtech.jellyfin.presentation.utils.plus
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import org.jellyfin.sdk.model.api.BaseItemKind
 import java.util.UUID
 import dev.jdtech.jellyfin.core.R as CoreR
 
@@ -69,6 +73,7 @@ fun LibraryScreen(
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     var initialLoad by rememberSaveable {
         mutableStateOf(true)
@@ -92,6 +97,17 @@ fun LibraryScreen(
             when (action) {
                 is LibraryAction.OnItemClick -> onItemClick(action.item)
                 is LibraryAction.OnBackClick -> navigateBack()
+                is LibraryAction.OnPlayClick -> {
+                    val intent = Intent(context, PlayerActivity::class.java)
+                    intent.putExtra("itemId", action.item.id.toString())
+                    intent.putExtra("itemKind", when (action.item) {
+                        is dev.jdtech.jellyfin.models.FindroidMovie -> BaseItemKind.MOVIE.serialName
+                        is dev.jdtech.jellyfin.models.FindroidEpisode -> BaseItemKind.EPISODE.serialName
+                        is dev.jdtech.jellyfin.models.FindroidShow -> BaseItemKind.SERIES.serialName
+                        else -> BaseItemKind.MOVIE.serialName
+                    })
+                    context.startActivity(intent)
+                }
                 else -> Unit
             }
             viewModel.onAction(action)
@@ -107,7 +123,7 @@ private fun LibraryScreenLayout(
     onAction: (LibraryAction) -> Unit,
 ) {
     val contentPadding = PaddingValues(
-        all = MaterialTheme.spacings.default,
+        all = MaterialTheme.spacings.small,
     )
 
     val items = state.items.collectAsLazyPagingItems()
@@ -168,11 +184,11 @@ private fun LibraryScreenLayout(
                     .padding(contentPadding + innerPadding),
             )
             LazyVerticalGrid(
-                columns = GridCellsAdaptiveWithMinColumns(minSize = 160.dp, minColumns = 2),
+                columns = GridCellsAdaptiveWithMinColumns(minSize = 120.dp, minColumns = 3),
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = contentPadding + innerPadding,
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
-                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
             ) {
                 items(
                     count = items.itemCount,
@@ -185,6 +201,9 @@ private fun LibraryScreenLayout(
                             direction = Direction.VERTICAL,
                             onClick = {
                                 onAction(LibraryAction.OnItemClick(item))
+                            },
+                            onPlayClick = {
+                                onAction(LibraryAction.OnPlayClick(item))
                             },
                             modifier = Modifier.animateItem(),
                         )

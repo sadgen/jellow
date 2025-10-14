@@ -66,9 +66,11 @@ class PlayerGestureHelper(
 
     private var playbackSpeedIncrease: Float = 2f
     private var lastPlaybackSpeed: Float = 0f
+    private var isLongPressSpeedAdjusting: Boolean = false
+    private var lastDistanceX: Float = 0f
 
-    private val screenWidth = Resources.getSystem().displayMetrics.widthPixels
-    private val screenHeight = Resources.getSystem().displayMetrics.heightPixels
+    private var screenWidth = Resources.getSystem().displayMetrics.widthPixels
+    private var screenHeight = Resources.getSystem().displayMetrics.heightPixels
 
     var currentTrickplay: Trickplay? = null
     private val trickplayRoundedCorners = RoundedCornersTransformation(10f)
@@ -100,6 +102,7 @@ class PlayerGestureHelper(
                     handleChapterSkip(e)
                 } else {
                     enableSpeedIncrease()
+                    isLongPressSpeedAdjusting = true
                 }
             }
 
@@ -261,6 +264,15 @@ class PlayerGestureHelper(
                 // Disables seek gestures if view is locked
                 if (isControlsLocked) return false
 
+                // 更新屏幕尺寸信息
+                updateScreenDimensions()
+
+                // Handle speed adjustment during long press
+                if (isLongPressSpeedAdjusting) {
+                    handleSpeedAdjustment(distanceX)
+                    return true
+                }
+
                 // Check whether swipe was oriented vertically
                 if (abs(distanceY / distanceX) < 2) {
                     return if ((abs(currentEvent.x - firstEvent.x) > 50 || swipeGestureProgressOpen) &&
@@ -313,6 +325,15 @@ class PlayerGestureHelper(
                 if (inExclusionArea(firstEvent)) return false
                 // Disables volume gestures when player is locked
                 if (isControlsLocked) return false
+
+                // 更新屏幕尺寸信息
+                updateScreenDimensions()
+
+                // Handle speed adjustment during long press
+                if (isLongPressSpeedAdjusting) {
+                    handleSpeedAdjustment(distanceX)
+                    return true
+                }
 
                 if (abs(distanceY / distanceX) < 2) return false
 
@@ -456,6 +477,7 @@ class PlayerGestureHelper(
                 }
             }
             currentNumberOfPointers = 0
+            isLongPressSpeedAdjusting = false
         }
         if (lastPlaybackSpeed > 0 && (event.action == MotionEvent.ACTION_UP || event.action == MotionEvent.ACTION_CANCEL)) {
             playerView.player?.setPlaybackSpeed(lastPlaybackSpeed)
@@ -509,6 +531,37 @@ class PlayerGestureHelper(
         } catch (e: Exception) {
             activity.binding.progressScrubberTrickplay.visibility = View.GONE
             Timber.d(e)
+        }
+    }
+
+    /**
+     * 更新屏幕尺寸信息，确保在屏幕旋转后手势仍能正常工作
+     */
+    private fun updateScreenDimensions() {
+        val displayMetrics = Resources.getSystem().displayMetrics
+        screenWidth = displayMetrics.widthPixels
+        screenHeight = displayMetrics.heightPixels
+    }
+
+    /**
+     * Handle speed adjustment during long press with horizontal swipe
+     */
+    private fun handleSpeedAdjustment(distanceX: Float) {
+        // Only adjust speed if the direction of swipe has changed significantly
+        if (abs(distanceX - lastDistanceX) > 10f) {
+            playerView.player?.let { player ->
+                val currentSpeed = player.playbackParameters.speed
+                // Calculate speed change based on swipe direction and distance
+                val speedChange = if (distanceX > 0) -0.1f else 0.1f
+                val newSpeed = (currentSpeed + speedChange).coerceIn(0.1f, 5.0f)
+                
+                if (newSpeed != currentSpeed) {
+                    player.setPlaybackSpeed(newSpeed)
+                    activity.binding.gestureSpeedText.text = String.format("%.1fx", newSpeed)
+                    lastPlaybackSpeed = newSpeed
+                }
+            }
+            lastDistanceX = distanceX
         }
     }
 

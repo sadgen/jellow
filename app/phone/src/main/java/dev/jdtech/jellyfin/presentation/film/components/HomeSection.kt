@@ -45,7 +45,7 @@ fun HomeSection(
         Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))
         LazyRow(
             contentPadding = itemsPadding,
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
         ) {
             items(section.items, key = { it.id }) { item ->
                 ItemCard(
@@ -54,6 +54,9 @@ fun HomeSection(
                     onClick = {
                         onAction(HomeAction.OnItemClick(item))
                     },
+                    onPlayClick = {
+                        onAction(HomeAction.OnPlayClick(item))
+                    }
                 )
             }
         }

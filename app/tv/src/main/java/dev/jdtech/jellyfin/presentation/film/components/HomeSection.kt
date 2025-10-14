@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import dev.jdtech.jellyfin.film.presentation.home.HomeAction
@@ -35,7 +36,7 @@ fun HomeSection(
         )
         Spacer(modifier = Modifier.height(MaterialTheme.spacings.medium))
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
             contentPadding = itemsPadding,
         ) {
             items(section.items, key = { it.id }) { item ->
@@ -45,6 +46,9 @@ fun HomeSection(
                     onClick = {
                         onAction(HomeAction.OnItemClick(it))
                     },
+                    onPlayClick = {
+                        onAction(HomeAction.OnPlayClick(it))
+                    }
                 )
             }
         }

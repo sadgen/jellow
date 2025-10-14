@@ -63,7 +63,7 @@ fun HomeCarousel(
         state = pagerState,
         contentPadding = itemsPadding,
         pageSize = dynamicPageSize,
-        pageSpacing = MaterialTheme.spacings.medium,
+        pageSpacing = MaterialTheme.spacings.small,
     ) { page ->
         val item = items[page]
         HomeCarouselItem(item = item, onAction = onAction)

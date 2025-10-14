@@ -1,5 +1,6 @@
 package dev.jdtech.jellyfin.presentation.film
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,10 +11,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
+import dev.jdtech.jellyfin.PlayerActivity
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyHomeSection
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyHomeSuggestions
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyHomeView
@@ -21,6 +24,7 @@ import dev.jdtech.jellyfin.film.presentation.home.HomeAction
 import dev.jdtech.jellyfin.film.presentation.home.HomeState
 import dev.jdtech.jellyfin.film.presentation.home.HomeViewModel
 import dev.jdtech.jellyfin.models.FindroidEpisode
+import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidMovie
 import dev.jdtech.jellyfin.models.FindroidShow
 import dev.jdtech.jellyfin.presentation.film.components.HomeCarousel
@@ -40,6 +44,7 @@ fun HomeScreen(
     isLoading: (Boolean) -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(true) {
         viewModel.loadData()
@@ -62,6 +67,17 @@ fun HomeScreen(
                         }
                     }
                 }
+                is HomeAction.OnPlayClick -> {
+                    val intent = Intent(context, PlayerActivity::class.java)
+                    intent.putExtra("itemId", action.item.id.toString())
+                    intent.putExtra("itemKind", when (action.item) {
+                        is FindroidMovie -> BaseItemKind.MOVIE.serialName
+                        is FindroidEpisode -> BaseItemKind.EPISODE.serialName
+                        is FindroidShow -> BaseItemKind.SERIES.serialName
+                        else -> BaseItemKind.MOVIE.serialName
+                    })
+                    context.startActivity(intent)
+                }
                 else -> Unit
             }
             viewModel.onAction(action)
@@ -82,7 +98,7 @@ private fun HomeScreenLayout(
         modifier = Modifier
             .fillMaxSize(),
         contentPadding = PaddingValues(top = MaterialTheme.spacings.extraSmall, bottom = MaterialTheme.spacings.large),
-        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.large),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
     ) {
         state.suggestionsSection?.let { section ->
             item(key = section.id) {

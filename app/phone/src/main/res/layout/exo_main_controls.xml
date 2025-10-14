@@ -17,7 +17,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            app:layout_constraintEnd_toStartOf="@id/extra_buttons"
+            app:layout_constraintEnd_toStartOf="@+id/extra_buttons"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
 
@@ -86,6 +86,21 @@
 
             <Space
                 android:id="@+id/space_pip"
+                android:layout_width="16dp"
+                android:layout_height="0dp" />
+
+            <ImageButton
+                android:id="@+id/btn_screen_rotation"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:background="@drawable/transparent_circle_background"
+                android:contentDescription="@string/player_controls_screen_rotation"
+                android:padding="16dp"
+                android:src="@drawable/ic_screen_rotation"
+                app:tint="@android:color/white" />
+
+            <Space
                 android:layout_width="16dp"
                 android:layout_height="0dp" />
 

@@ -1,5 +1,6 @@
 package dev.jdtech.jellyfin.presentation.film
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -19,6 +20,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
@@ -26,6 +28,7 @@ import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.jdtech.jellyfin.PlayerActivity
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyHomeSection
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyHomeSuggestions
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyHomeView
@@ -45,6 +48,8 @@ import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.presentation.utils.rememberSafePadding
 import kotlinx.coroutines.launch
+import org.jellyfin.sdk.model.api.BaseItemKind
+import java.util.UUID
 
 @Composable
 fun HomeScreen(
@@ -55,6 +60,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(true) {
         viewModel.loadData()
@@ -68,6 +74,17 @@ fun HomeScreen(
                 is HomeAction.OnLibraryClick -> onLibraryClick(action.library)
                 is HomeAction.OnSettingsClick -> onSettingsClick()
                 is HomeAction.OnManageServers -> onManageServers()
+                is HomeAction.OnPlayClick -> {
+                    val intent = Intent(context, PlayerActivity::class.java)
+                    intent.putExtra("itemId", action.item.id.toString())
+                    intent.putExtra("itemKind", when (action.item) {
+                        is dev.jdtech.jellyfin.models.FindroidMovie -> BaseItemKind.MOVIE.serialName
+                        is dev.jdtech.jellyfin.models.FindroidEpisode -> BaseItemKind.EPISODE.serialName
+                        is dev.jdtech.jellyfin.models.FindroidShow -> BaseItemKind.SERIES.serialName
+                        else -> BaseItemKind.MOVIE.serialName
+                    })
+                    context.startActivity(intent)
+                }
                 else -> Unit
             }
             viewModel.onAction(action)
@@ -115,7 +132,7 @@ private fun HomeScreenLayout(
                 top = contentPaddingTop,
                 bottom = paddingBottom,
             ),
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
         ) {
             state.suggestionsSection?.let { section ->
                 item(key = section.id) {

@@ -44,6 +44,7 @@ constructor(
     val playerGesturesChapterSkip = Preference("pref_player_gestures_chapter_skip", true)
     val playerGesturesBrightnessRemember = Preference("pref_player_brightness_remember", false)
     val playerGesturesStartMaximized = Preference("pref_player_start_maximized", false)
+    val playerStartInPortrait = Preference("pref_player_start_in_portrait", false)
 
     // Player - seeking
     val playerSeekBackInc = Preference("pref_player_seek_back_inc", 5_000L)

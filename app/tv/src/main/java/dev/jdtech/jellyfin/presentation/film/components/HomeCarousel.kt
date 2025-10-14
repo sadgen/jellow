@@ -31,6 +31,7 @@ fun HomeCarousel(
             .fillMaxWidth(),
         contentTransformEndToStart = fadeIn(tween(1000)).togetherWith(fadeOut(tween(1000))),
         contentTransformStartToEnd = fadeIn(tween(1000)).togetherWith(fadeOut(tween(1000))),
+        spacing = 12.dp, // 减小间距
     ) { itemIndex ->
         val item = items[itemIndex]
         HomeCarouselItem(item = item, onAction = onAction)

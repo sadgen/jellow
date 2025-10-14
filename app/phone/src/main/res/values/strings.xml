@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">Findroid</string>
+    <string name="movies">Movies</string>
+    <string name="series">Series</string>
+    <string name="home">Home</string>
+    <string name="settings">Settings</string>
+    <string name="recently_added">Recently added</string>
+    <string name="continue_watching">Continue watching</string>
+    <string name="player_controls_exit">Exit player</string>
+    <string name="player_controls_lock">Lock controls</string>
+    <string name="player_controls_unlock">Unlock controls</string>
+    <string name="player_controls_play_pause">Play/Pause</string>
+    <string name="player_controls_rewind">Rewind</string>
+    <string name="player_controls_fast_forward">Fast-forward</string>
+    <string name="player_controls_skip_back">Skip to previous chapter</string>
+    <string name="player_controls_skip_forward">Skip to next chapter</string>
+    <string name="player_controls_progress">Playback progress</string>
+    <string name="player_trickplay">Trickplay preview</string>
+    <string name="select_playback_speed">Select playback speed</string>
+    <string name="select_audio_track">Select audio track</string>
+    <string name="select_subtile_track">Select subtitle track</string>
+    <string name="player_controls_screen_rotation">Toggle screen orientation</string>
+</resources>
