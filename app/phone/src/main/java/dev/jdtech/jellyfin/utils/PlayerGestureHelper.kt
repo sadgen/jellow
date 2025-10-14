@@ -64,7 +64,7 @@ class PlayerGestureHelper(
 
     private var lastScaleEvent: Long = 0
 
-    private var playbackSpeedIncrease: Float = 2f
+    private var playbackSpeedIncrease: Float = 5f
     private var lastPlaybackSpeed: Float = 0f
     private var isLongPressSpeedAdjusting: Boolean = false
     private var lastDistanceX: Float = 0f
@@ -90,20 +90,29 @@ class PlayerGestureHelper(
             }
 
             override fun onLongPress(e: MotionEvent) {
+                Timber.d("onLongPress called")
                 // Disables long press gesture if view is locked
-                if (isControlsLocked) return
+                if (isControlsLocked) {
+                    Timber.d("Long press gesture disabled - controls locked")
+                    return
+                }
 
                 // Stop long press gesture when more than 1 pointer
-                if (currentNumberOfPointers > 1) return
+                if (currentNumberOfPointers > 1) {
+                    Timber.d("Long press gesture disabled - multiple pointers")
+                    return
+                }
 
                 // This is a temporary solution for chapter skipping.
                 // TODO: Remove this after implementing #636
                 if (appPreferences.getValue(appPreferences.playerGesturesChapterSkip)) {
+                    Timber.d("Handling chapter skip")
                     handleChapterSkip(e)
-                } else {
-                    enableSpeedIncrease()
-                    isLongPressSpeedAdjusting = true
                 }
+                // Always enable speed adjustment through gestures, regardless of chapter skip setting
+                Timber.d("Enabling speed adjustment")
+                enableSpeedIncrease()
+                isLongPressSpeedAdjusting = true
             }
 
             override fun onDoubleTap(e: MotionEvent): Boolean {
@@ -145,6 +154,7 @@ class PlayerGestureHelper(
                 it.setPlaybackSpeed(playbackSpeedIncrease)
                 activity.binding.gestureSpeedText.text = playbackSpeedIncrease.toString() + "x"
                 activity.binding.gestureSpeedLayout.visibility = View.VISIBLE
+                Timber.d("Speed increased to ${playbackSpeedIncrease}x")
             }
         }
     }
@@ -260,15 +270,22 @@ class PlayerGestureHelper(
             ): Boolean {
                 if (firstEvent == null) return false
                 // Excludes area where app gestures conflicting with system gestures
-                if (inExclusionArea(firstEvent)) return false
+                if (inExclusionArea(firstEvent)) {
+                    Timber.d("Scroll gesture in exclusion area")
+                    return false
+                }
                 // Disables seek gestures if view is locked
-                if (isControlsLocked) return false
+                if (isControlsLocked) {
+                    Timber.d("Scroll gesture disabled - controls locked")
+                    return false
+                }
 
                 // 更新屏幕尺寸信息
                 updateScreenDimensions()
 
                 // Handle speed adjustment during long press
                 if (isLongPressSpeedAdjusting) {
+                    Timber.d("Handling speed adjustment during long press")
                     handleSpeedAdjustment(distanceX)
                     return true
                 }
@@ -283,7 +300,8 @@ class PlayerGestureHelper(
                         val currentPos = playerView.player?.currentPosition ?: 0
                         val vidDuration = (playerView.player?.duration ?: 0).coerceAtLeast(0)
 
-                        val difference = ((currentEvent.x - firstEvent.x) * 90).toLong()
+                        // Double the seek increment when in search mode (by multiplying the difference by 2)
+                        val difference = ((currentEvent.x - firstEvent.x) * 90 * 2).toLong()
                         val newPos = (currentPos + difference).coerceIn(0, vidDuration)
 
                         activity.binding.progressScrubberLayout.visibility = View.VISIBLE
@@ -322,15 +340,22 @@ class PlayerGestureHelper(
             ): Boolean {
                 if (firstEvent == null) return false
                 // Excludes area where app gestures conflicting with system gestures
-                if (inExclusionArea(firstEvent)) return false
+                if (inExclusionArea(firstEvent)) {
+                    Timber.d("VB Scroll gesture in exclusion area")
+                    return false
+                }
                 // Disables volume gestures when player is locked
-                if (isControlsLocked) return false
+                if (isControlsLocked) {
+                    Timber.d("VB Scroll gesture disabled - controls locked")
+                    return false
+                }
 
                 // 更新屏幕尺寸信息
                 updateScreenDimensions()
 
                 // Handle speed adjustment during long press
                 if (isLongPressSpeedAdjusting) {
+                    Timber.d("Handling speed adjustment during VB long press")
                     handleSpeedAdjustment(distanceX)
                     return true
                 }
@@ -450,6 +475,7 @@ class PlayerGestureHelper(
 
     private fun releaseAction(event: MotionEvent) {
         if (event.action == MotionEvent.ACTION_UP || event.action == MotionEvent.ACTION_CANCEL) {
+            Timber.d("Release action: ${event.action}")
             activity.binding.gestureVolumeLayout.apply {
                 if (isVisible) {
                     removeCallbacks(hideGestureVolumeIndicatorOverlayAction)
@@ -477,7 +503,10 @@ class PlayerGestureHelper(
                 }
             }
             currentNumberOfPointers = 0
-            isLongPressSpeedAdjusting = false
+            if (isLongPressSpeedAdjusting) {
+                Timber.d("Resetting long press speed adjustment flag")
+                isLongPressSpeedAdjusting = false
+            }
         }
         if (lastPlaybackSpeed > 0 && (event.action == MotionEvent.ACTION_UP || event.action == MotionEvent.ACTION_CANCEL)) {
             playerView.player?.setPlaybackSpeed(lastPlaybackSpeed)
@@ -547,19 +576,18 @@ class PlayerGestureHelper(
      * Handle speed adjustment during long press with horizontal swipe
      */
     private fun handleSpeedAdjustment(distanceX: Float) {
-        // Only adjust speed if the direction of swipe has changed significantly
-        if (abs(distanceX - lastDistanceX) > 10f) {
-            playerView.player?.let { player ->
-                val currentSpeed = player.playbackParameters.speed
-                // Calculate speed change based on swipe direction and distance
-                val speedChange = if (distanceX > 0) -0.1f else 0.1f
-                val newSpeed = (currentSpeed + speedChange).coerceIn(0.1f, 5.0f)
-                
-                if (newSpeed != currentSpeed) {
-                    player.setPlaybackSpeed(newSpeed)
-                    activity.binding.gestureSpeedText.text = String.format("%.1fx", newSpeed)
-                    lastPlaybackSpeed = newSpeed
-                }
+        playerView.player?.let { player ->
+            val currentSpeed = player.playbackParameters.speed
+            // Calculate speed change based on swipe direction - more responsive adjustment
+            val speedChange = if (distanceX > 0) -0.1f else 0.1f
+            val newSpeed = (currentSpeed + speedChange).coerceIn(0.1f, 5.0f)
+            
+            Timber.d("Adjusting speed: current=$currentSpeed, change=$speedChange, new=$newSpeed")
+            
+            if (newSpeed != currentSpeed) {
+                player.setPlaybackSpeed(newSpeed)
+                activity.binding.gestureSpeedText.text = String.format("%.1fx", newSpeed)
+                lastPlaybackSpeed = newSpeed
             }
             lastDistanceX = distanceX
         }

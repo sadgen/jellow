@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="player_progress_bottom_margin_portrait">240dp</dimen>
+    <dimen name="player_progress_bottom_margin_landscape">16dp</dimen>
+</resources>

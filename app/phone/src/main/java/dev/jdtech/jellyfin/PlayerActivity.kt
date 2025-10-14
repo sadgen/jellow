@@ -18,11 +18,13 @@ import android.provider.Settings
 import android.util.Rational
 import android.view.SurfaceView
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.Space
 import android.widget.TextView
 import androidx.activity.viewModels
@@ -112,6 +114,8 @@ class PlayerActivity : BasePlayerActivity() {
                 if (visibility == View.GONE) {
                     hideSystemUI()
                 }
+                // Update progress bar position based on orientation
+                updateProgressBarPosition()
             },
         )
 
@@ -184,6 +188,8 @@ class PlayerActivity : BasePlayerActivity() {
                                     if (skipButtonTimeoutExpired && currentSegment != null) {
                                         skipSegmentButton.visibility = visibility
                                     }
+                                    // Update progress bar position based on orientation
+                                    updateProgressBarPosition()
                                 },
                             )
 
@@ -331,6 +337,8 @@ class PlayerActivity : BasePlayerActivity() {
             } else {
                 ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             }
+            // Update progress bar position after rotation
+            updateProgressBarPosition()
         }
 
         pipButton.setOnClickListener {
@@ -358,6 +366,9 @@ class PlayerActivity : BasePlayerActivity() {
             startFromBeginning = startFromBeginning,
         )
         hideSystemUI()
+        
+        // Initial update of progress bar position
+        updateProgressBarPosition()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -493,6 +504,30 @@ class PlayerActivity : BasePlayerActivity() {
         // 更新手势助手中的屏幕尺寸信息
         playerGestureHelper?.let {
             // 屏幕方向改变时更新屏幕尺寸
+        }
+        // Update progress bar position when configuration changes
+        updateProgressBarPosition()
+    }
+    
+    /**
+     * Update the position of the progress bar based on screen orientation
+     * In portrait mode, move it closer to the bottom for easier thumb access
+     */
+    private fun updateProgressBarPosition() {
+        val timeBar = binding.playerView.findViewById<DefaultTimeBar>(R.id.exo_progress)
+        
+        if (timeBar != null) {
+            val layoutParams = timeBar.layoutParams as ViewGroup.MarginLayoutParams
+            
+            if (resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT) {
+                // In portrait mode, reduce bottom margin to bring progress bar closer to the bottom
+                layoutParams.bottomMargin = 560 // Reduced margin for easier thumb access
+            } else {
+                // In landscape mode, keep the default margin
+                layoutParams.bottomMargin = 16
+            }
+            
+            timeBar.layoutParams = layoutParams
         }
     }
 }
