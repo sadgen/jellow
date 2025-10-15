@@ -148,10 +148,10 @@ class PlayerGestureHelper(
 
     @SuppressLint("SetTextI18n")
     private fun enableSpeedIncrease() {
-        playerView.player?.let {
-            if (it.isPlaying) {
-                lastPlaybackSpeed = it.playbackParameters.speed
-                it.setPlaybackSpeed(playbackSpeedIncrease)
+        playerView.player?.let { player ->
+            if (player.isPlaying) {
+                lastPlaybackSpeed = player.playbackParameters.speed
+                player.setPlaybackSpeed(playbackSpeedIncrease)
                 activity.binding.gestureSpeedText.text = playbackSpeedIncrease.toString() + "x"
                 activity.binding.gestureSpeedLayout.visibility = View.VISIBLE
                 Timber.d("Speed increased to ${playbackSpeedIncrease}x")
