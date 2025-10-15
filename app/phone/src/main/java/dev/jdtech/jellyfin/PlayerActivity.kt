@@ -520,7 +520,7 @@ class PlayerActivity : BasePlayerActivity() {
             
             if (resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT) {
                 // In portrait mode, reduce bottom margin to bring progress bar closer to the bottom
-                layoutParams.bottomMargin = 560 // Reduced margin for easier thumb access
+                layoutParams.bottomMargin = 666 // Reduced margin for easier thumb access
             } else {
                 // In landscape mode, keep the default margin
                 layoutParams.bottomMargin = 16

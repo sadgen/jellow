@@ -134,6 +134,7 @@ private fun HomeScreenLayout(
             ),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
         ) {
+            /*
             state.suggestionsSection?.let { section ->
                 item(key = section.id) {
                     HomeCarousel(
@@ -143,6 +144,7 @@ private fun HomeScreenLayout(
                     )
                 }
             }
+            */
             state.resumeSection?.let { section ->
                 item(key = section.id) {
                     HomeSection(
