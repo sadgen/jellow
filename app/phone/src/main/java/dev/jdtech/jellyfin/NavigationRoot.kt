@@ -133,7 +133,20 @@ data class PersonRoute(
 @Serializable
 data class SettingsRoute(
     val indexes: IntArray,
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as SettingsRoute
+
+        return indexes.contentEquals(other.indexes)
+    }
+
+    override fun hashCode(): Int {
+        return indexes.contentHashCode()
+    }
+}
 
 @Serializable
 data object AboutRoute
