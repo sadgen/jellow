@@ -176,7 +176,7 @@ private fun SettingsScreenLayout(
 private fun SettingsScreenLayoutPreview() {
     FindroidTheme {
         SettingsScreenLayout(
-            title = CoreR.string.title_settings,
+            title = SettingsR.string.title_settings,
             state = SettingsState(
                 preferenceGroups = listOf(
                     PreferenceGroup(

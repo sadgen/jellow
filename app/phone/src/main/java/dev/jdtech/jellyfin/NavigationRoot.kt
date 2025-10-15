@@ -59,6 +59,7 @@ import dev.jdtech.jellyfin.presentation.setup.welcome.WelcomeScreen
 import kotlinx.serialization.Serializable
 import java.util.UUID
 import dev.jdtech.jellyfin.core.R as CoreR
+import dev.jdtech.jellyfin.settings.R as SettingsR
 
 @Serializable
 data object WelcomeRoute
@@ -335,7 +336,7 @@ fun NavigationRoot(
                         navController.safeNavigate(LibraryRoute(libraryId = it.id.toString(), libraryName = it.name, libraryType = it.type))
                     },
                     onSettingsClick = {
-                        navController.safeNavigate(SettingsRoute(indexes = intArrayOf(CoreR.string.title_settings)))
+                        navController.safeNavigate(SettingsRoute(indexes = intArrayOf(SettingsR.string.title_settings)))
                     },
                     onManageServers = {
                         navController.safeNavigate(ServersRoute)

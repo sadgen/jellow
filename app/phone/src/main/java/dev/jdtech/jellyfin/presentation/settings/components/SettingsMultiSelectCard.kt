@@ -26,6 +26,7 @@ import dev.jdtech.jellyfin.settings.domain.models.Preference
 import dev.jdtech.jellyfin.settings.presentation.models.PreferenceMultiSelect
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.settings.R as SettingsR
+import dev.jdtech.jellyfin.player.local.R as PlayerLocalR
 
 @Composable
 fun SettingsMultiSelectCard(
@@ -35,7 +36,7 @@ fun SettingsMultiSelectCard(
 ) {
     val optionValues = stringArrayResource(preference.optionValues)
     val optionNames = stringArrayResource(preference.options)
-    val noneString = stringResource(CoreR.string.none)
+    val noneString = stringResource(PlayerLocalR.string.none)
 
     val options = remember(preference.nameStringResource) {
         optionValues.zip(optionNames)
