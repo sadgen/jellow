@@ -9,6 +9,7 @@ enum class CollectionType(val type: String) {
     Books("books"),
     LiveTv("livetv"),
     BoxSets("boxsets"),
+    Folder("folders"),
     Mixed("null"),
     Unknown("unknown"),
     ;
@@ -20,6 +21,7 @@ enum class CollectionType(val type: String) {
             Movies,
             TvShows,
             BoxSets,
+            Folder,
             Mixed,
         )
 
@@ -30,7 +32,7 @@ enum class CollectionType(val type: String) {
 
             return try {
                 entries.first { it.type == string }
-            } catch (e: NoSuchElementException) {
+            } catch (_: NoSuchElementException) {
                 defaultValue
             }
         }
