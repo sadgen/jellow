@@ -9,6 +9,7 @@ enum class CollectionType(val type: String) {
     Books("books"),
     LiveTv("livetv"),
     BoxSets("boxsets"),
+    Folder("folders"),
     Mixed("null"),
     Folders("folders"),
     Unknown("unknown");
@@ -16,7 +17,13 @@ enum class CollectionType(val type: String) {
     companion object {
         val defaultValue = Unknown
 
-        val supported = listOf(Movies, TvShows, BoxSets, Mixed, Folders)
+        val supported = listOf(
+            Movies,
+            TvShows,
+            BoxSets,
+            Folder,
+            Mixed,
+        )
 
         fun fromString(string: String?): CollectionType {
             if (
@@ -29,7 +36,7 @@ enum class CollectionType(val type: String) {
 
             return try {
                 entries.first { it.type == string }
-            } catch (e: NoSuchElementException) {
+            } catch (_: NoSuchElementException) {
                 defaultValue
             }
         }

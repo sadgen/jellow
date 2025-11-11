@@ -479,24 +479,9 @@ private fun navigateToItem(navController: NavHostController, item: FindroidItem)
         is FindroidMovie -> navController.safeNavigate(MovieRoute(movieId = item.id.toString()))
         is FindroidShow -> navController.safeNavigate(ShowRoute(showId = item.id.toString()))
         is FindroidSeason -> navController.safeNavigate(SeasonRoute(seasonId = item.id.toString()))
-        is FindroidEpisode ->
-            navController.safeNavigate(EpisodeRoute(episodeId = item.id.toString()))
-        is FindroidCollection ->
-            navController.safeNavigate(
-                LibraryRoute(
-                    libraryId = item.id.toString(),
-                    libraryName = item.name,
-                    libraryType = item.type,
-                )
-            )
-        is FindroidFolder ->
-            navController.safeNavigate(
-                LibraryRoute(
-                    libraryId = item.id.toString(),
-                    libraryName = item.name,
-                    libraryType = CollectionType.Folders,
-                )
-            )
+        is FindroidEpisode -> navController.safeNavigate(EpisodeRoute(episodeId = item.id.toString()))
+        is FindroidCollection -> navController.safeNavigate(LibraryRoute(libraryId = item.id.toString(), libraryName = item.name, libraryType = item.type))
+        is FindroidFolder -> navController.safeNavigate(LibraryRoute(libraryId = item.id.toString(), libraryName = item.name, libraryType = CollectionType.Folder))
         else -> Unit
     }
 }
