@@ -123,6 +123,9 @@ interface JellyfinRepository {
 
     suspend fun markAsUnplayed(itemId: UUID)
 
+    // 添加删除项目的方法
+    suspend fun deleteItems(itemIds: List<UUID>): Boolean
+
     fun getBaseUrl(): String
 
     suspend fun updateDeviceName(name: String)

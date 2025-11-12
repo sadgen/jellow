@@ -1,12 +1,8 @@
 package dev.jdtech.jellyfin.presentation.film.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.drag
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,15 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.PointerInputChange
-import androidx.compose.ui.input.pointer.PointerInputScope
-import androidx.compose.ui.input.pointer.changedToUp
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.positionChange
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -63,11 +51,16 @@ import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ItemCard(
     item: FindroidItem,
     direction: Direction,
     onClick: (FindroidItem) -> Unit,
+    onPlayClick: (FindroidItem) -> Unit = {},
+    onLongClick: (() -> Unit)? = null,
+    selected: Boolean = false,
+    isDuplicate: Boolean = false,
     modifier: Modifier = Modifier,
     repository: JellyfinRepository? = null,
     onPlayClick: ((FindroidItem) -> Unit)? = null,
@@ -89,71 +82,22 @@ fun ItemCard(
     var runtimeTicks by remember { mutableStateOf(0L) }
 
     Column(
-        modifier =
-            modifier
-                .width(width.dp)
-                .clip(MaterialTheme.shapes.small)
-                .onGloballyPositioned { coords ->
-                    cardWidthPx = coords.size.width.toFloat()
-                }
-                .pointerInput(item, repository) {
-                    detectTapGestures(
-                        onTap = { onClick(item) },
-                    )
-                }
-                .then(
-                    if (repository != null) {
-                        Modifier.pointerInput(item, repository) {
-                            detectDragGesturesAfterShortLongPress(
-                                onDragStart = { offset ->
-                                    isActuallyDragging = true
-                                    // Fetch trickplay info on-demand
-                                    if (cardWidthPx > 0) {
-                                        scrubFraction = (offset.x / cardWidthPx).coerceIn(0f, 1f)
-                                    }
-                                    val sources = item as? FindroidSources
-                                    val existingInfo = sources?.trickplayInfo?.values?.firstOrNull()
-                                    val itemRuntimeTicks = sources?.runtimeTicks ?: item.runtimeTicks
-
-                                    if (existingInfo != null && itemRuntimeTicks > 0) {
-                                        trickplayInfo = existingInfo
-                                        runtimeTicks = itemRuntimeTicks
-                                        isScrubbing = true
-                                    } else if (itemRuntimeTicks > 0) {
-                                        // Fetch from API
-                                        coroutineScope.launch {
-                                            val info = repository.getTrickplayInfoForItem(item.id)
-                                            if (info != null && isActuallyDragging) {
-                                                trickplayInfo = info
-                                                runtimeTicks = itemRuntimeTicks
-                                                isScrubbing = true
-                                            }
-                                        }
-                                    }
-                                },
-                                onDragEnd = { 
-                                    isScrubbing = false
-                                    isActuallyDragging = false
-                                },
-                                onDragCancel = { 
-                                    isScrubbing = false
-                                    isActuallyDragging = false
-                                },
-                                onDrag = { change, _ ->
-                                    if (cardWidthPx > 0 && isActuallyDragging) {
-                                        scrubFraction = (change.position.x / cardWidthPx).coerceIn(0f, 1f)
-                                        isScrubbing = true // Ensure visible if we move even before data returns? 
-                                        // Actually isScrubbing is controlled by data availability.
-                                    }
-                                },
-                            )
-                        }
-                    } else {
-                        Modifier
-                    }
-                )
+        modifier = modifier
+            .width(width.dp)
+            .clip(MaterialTheme.shapes.small)
+            .combinedClickable(
+                onClick = {
+                    onClick(item)
+                },
+                onLongClick = onLongClick
+            )
+            .then(if (selected) Modifier.clip(MaterialTheme.shapes.small) else Modifier),
     ) {
-        Surface(shape = MaterialTheme.shapes.small) {
+        Surface(
+            shape = MaterialTheme.shapes.small,
+            color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+            border = if (isDuplicate) BorderStroke(2.dp, Color.Red) else null
+        ) {
             Box {
                 ItemPoster(item = item, direction = direction)
                 if (isScrubbing) {
@@ -191,46 +135,49 @@ fun ItemCard(
                                 .padding(MaterialTheme.spacings.small),
                     )
                 }
-                // Quick play button
-                if (item.canPlay && onPlayClick != null) {
+                
+                // Show selection indicator when in selection mode
+                if (selected) {
                     Box(
                         modifier = Modifier
-                            .align(Alignment.BottomEnd)
+                            .align(Alignment.TopStart)
                             .padding(MaterialTheme.spacings.small)
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(
-                                color = Color.Black.copy(alpha = 0.45f),
-                            )
-                            .pointerInput(Unit) {
-                                detectTapGestures(onTap = { onPlayClick(item) })
-                            },
-                        contentAlignment = Alignment.Center,
+                            .size(24.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_play),
-                            contentDescription = "Play",
-                            tint = Color.White.copy(alpha = 0.95f),
-                            modifier = Modifier.size(16.dp),
-                        )
+                        Surface(
+                            shape = MaterialTheme.shapes.small,
+                            color = Color.Red  // 改为红底
+                        ) {
+                            Box(
+                                modifier = Modifier.size(24.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_check),
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
                     }
                 }
-
-                // Trickplay preview popup
-                if (isScrubbing && trickplayInfo != null && repository != null) {
-                    Popup(
-                        alignment = Alignment.TopCenter,
-                        offset = IntOffset(0, with(LocalDensity.current) { (-200).dp.roundToPx() }),
-                        properties = PopupProperties(focusable = false),
-                    ) {
-                        TrickplayPreview(
-                            itemId = item.id,
-                            trickplayInfo = trickplayInfo!!,
-                            runtimeTicks = runtimeTicks,
-                            scrubFraction = scrubFraction,
-                            repository = repository,
-                        )
-                    }
+                
+                // 添加透明播放按钮
+                IconButton(
+                    onClick = { onPlayClick(item) },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(MaterialTheme.spacings.small)
+                        .size(36.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_play),
+                        contentDescription = "Play",
+                        tint = Color.White.copy(alpha = 0.8f),
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
         }
@@ -240,6 +187,9 @@ fun ItemCard(
             style = MaterialTheme.typography.bodyMedium,
             maxLines = if (item is FindroidEpisode) 1 else 2,
             overflow = TextOverflow.Ellipsis,
+            color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer 
+                   else if (isDuplicate) Color.Red 
+                   else MaterialTheme.colorScheme.onSurface
         )
         if (item is FindroidEpisode) {
             Text(
@@ -251,7 +201,9 @@ fun ItemCard(
                         item.name,
                     ),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+                color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) 
+                      else if (isDuplicate) Color.Red.copy(alpha = 0.8f)
+                      else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

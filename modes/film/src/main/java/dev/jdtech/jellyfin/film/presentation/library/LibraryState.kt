@@ -15,4 +15,10 @@ data class LibraryState(
     val isDuplicateFinderEnabled: Boolean = false,
     val isVrFilterEnabled: Boolean = false,
     val error: Exception? = null,
+    val selectionMode: Boolean = false,
+    val selectedItems: Set<FindroidItem> = emptySet(),
+    val duplicateItems: Set<FindroidItem> = emptySet(),
+    val showOnlyDuplicates: Boolean = false,
+    val showSnackBar: Boolean = false,
+    val snackBarMessage: String = ""
 )

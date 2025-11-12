@@ -10,8 +10,24 @@ sealed interface LibraryAction {
     data object OnBackClick : LibraryAction
 
     data class ChangeSorting(val sortBy: SortBy, val sortOrder: SortOrder) : LibraryAction
-
-    data object ToggleDuplicateFinder : LibraryAction
-
-    data object ToggleVrFilter : LibraryAction
+    
+    // Selection mode actions
+    data object OnEnterSelectionMode : LibraryAction
+    data object OnExitSelectionMode : LibraryAction
+    data class OnItemLongClick(val item: FindroidItem) : LibraryAction
+    data class OnItemSelectionToggle(val item: FindroidItem) : LibraryAction
+    data class OnSelectAllItems(val items: List<FindroidItem>) : LibraryAction
+    data object OnClearSelection : LibraryAction
+    
+    // Multi-selection operations
+    data object OnDeleteSelectedItems : LibraryAction
+    data object OnMarkSelectedAsPlayed : LibraryAction
+    data object OnAddSelectedToPlaylist : LibraryAction
+    data object OnFavoriteSelectedItems : LibraryAction
+    
+    // Refresh action
+    data object OnRefresh : LibraryAction
+    
+    // Duplicate filter action
+    data object OnToggleShowOnlyDuplicates : LibraryAction
 }
