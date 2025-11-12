@@ -58,4 +58,5 @@ dependencies {
     implementation(libs.jellyfin.core)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.timber)
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }

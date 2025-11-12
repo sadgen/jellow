@@ -32,6 +32,7 @@ import dev.jdtech.jellyfin.film.presentation.media.MediaViewModel
 import dev.jdtech.jellyfin.film.presentation.search.SearchAction
 import dev.jdtech.jellyfin.film.presentation.search.SearchState
 import dev.jdtech.jellyfin.film.presentation.search.SearchViewModel
+import dev.jdtech.jellyfin.models.FindroidCollection
 import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.presentation.components.ErrorDialog
 import dev.jdtech.jellyfin.presentation.film.components.Direction

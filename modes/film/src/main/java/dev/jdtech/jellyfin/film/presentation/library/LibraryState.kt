@@ -13,4 +13,10 @@ data class LibraryState(
     val sortOrder: SortOrder = SortOrder.ASCENDING,
     val isLoading: Boolean = false,
     val error: Exception? = null,
+    val selectionMode: Boolean = false,
+    val selectedItems: Set<FindroidItem> = emptySet(),
+    val duplicateItems: Set<FindroidItem> = emptySet(),
+    val showOnlyDuplicates: Boolean = false,
+    val showSnackBar: Boolean = false,
+    val snackBarMessage: String = ""
 )

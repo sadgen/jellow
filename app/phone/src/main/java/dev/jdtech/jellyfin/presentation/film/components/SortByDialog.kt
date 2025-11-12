@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -50,7 +51,9 @@ import dev.jdtech.jellyfin.core.R as CoreR
 fun SortByDialog(
     currentSortBy: SortBy,
     currentSortOrder: SortOrder,
+    showOnlyDuplicates: Boolean,
     onUpdate: (sortBy: SortBy, sortOrder: SortOrder) -> Unit,
+    onToggleShowOnlyDuplicates: () -> Unit,
     onDismissRequest: () -> Unit,
 ) {
     val optionValues = SortBy.entries
@@ -144,6 +147,31 @@ fun SortByDialog(
                         .fillMaxWidth(),
                     state = lazyListState,
                 ) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onToggleShowOnlyDuplicates()
+                                }
+                                .padding(
+                                    horizontal = MaterialTheme.spacings.default,
+                                    vertical = MaterialTheme.spacings.small,
+                                ),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Checkbox(
+                                checked = showOnlyDuplicates,
+                                onCheckedChange = {
+                                    onToggleShowOnlyDuplicates()
+                                },
+                            )
+                            Spacer(modifier = Modifier.width(MaterialTheme.spacings.medium))
+                            Text(
+                                text = "仅显示重复项",
+                            )
+                        }
+                    }
                     items(options) { option ->
                         SortByDialogItem(
                             option = option,
@@ -198,7 +226,9 @@ private fun SortByDialogPreview() {
         SortByDialog(
             currentSortBy = SortBy.NAME,
             currentSortOrder = SortOrder.ASCENDING,
+            showOnlyDuplicates = false,
             onUpdate = { _, _ -> },
+            onToggleShowOnlyDuplicates = {},
             onDismissRequest = {},
         )
     }

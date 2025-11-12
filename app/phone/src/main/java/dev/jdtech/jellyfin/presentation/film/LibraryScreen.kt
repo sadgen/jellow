@@ -1,7 +1,10 @@
 package dev.jdtech.jellyfin.presentation.film
 
 import android.content.Intent
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -9,15 +12,18 @@ import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.recalculateWindowInsets
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -29,6 +35,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -42,6 +50,7 @@ import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import dev.jdtech.jellyfin.PlayerActivity
+import dev.jdtech.jellyfin.core.R
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyMovies
 import dev.jdtech.jellyfin.film.presentation.library.LibraryAction
 import dev.jdtech.jellyfin.film.presentation.library.LibraryState
@@ -61,7 +70,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import org.jellyfin.sdk.model.api.BaseItemKind
 import java.util.UUID
-import dev.jdtech.jellyfin.core.R as CoreR
 
 @Composable
 fun LibraryScreen(
@@ -90,6 +98,20 @@ fun LibraryScreen(
         }
     }
 
+    // 处理系统后退按钮
+    BackHandler(enabled = state.selectionMode) {
+        viewModel.onAction(LibraryAction.OnExitSelectionMode)
+    }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    
+    // 处理SnackBar消息
+    LaunchedEffect(state.showSnackBar) {
+        if (state.showSnackBar) {
+            snackbarHostState.showSnackbar(state.snackBarMessage)
+        }
+    }
+    
     LibraryScreenLayout(
         libraryName = libraryName,
         state = state,
@@ -112,6 +134,7 @@ fun LibraryScreen(
             }
             viewModel.onAction(action)
         },
+        snackbarHostState = snackbarHostState,
     )
 }
 
@@ -121,94 +144,188 @@ private fun LibraryScreenLayout(
     libraryName: String,
     state: LibraryState,
     onAction: (LibraryAction) -> Unit,
+    snackbarHostState: SnackbarHostState,
 ) {
-    val contentPadding = PaddingValues(
-        all = MaterialTheme.spacings.small,
-    )
-
     val items = state.items.collectAsLazyPagingItems()
+    var showSortByDialog by rememberSaveable { mutableStateOf(false) }
 
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
-
-    var showSortByDialog by remember {
-        mutableStateOf(false)
-    }
+    
+    // 添加状态以控制菜单显示
+    var showMenu by remember { mutableStateOf(false) }
 
     Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .recalculateWindowInsets()
-            .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
-                title = {
-                    Text(libraryName)
-                },
+                title = { Text(text = libraryName) },
                 navigationIcon = {
-                    IconButton(
-                        onClick = {
-                            onAction(LibraryAction.OnBackClick)
-                        },
-                    ) {
+                    IconButton(onClick = { onAction(LibraryAction.OnBackClick) }) {
                         Icon(
-                            painter = painterResource(CoreR.drawable.ic_arrow_left),
+                            painter = painterResource(R.drawable.ic_arrow_left),
                             contentDescription = null,
                         )
                     }
                 },
                 actions = {
-                    IconButton(
-                        onClick = {
-                            showSortByDialog = true
-                        },
-                    ) {
+                    if (items.itemCount > 0) {
+                        IconButton(onClick = { showSortByDialog = true }) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_arrow_down_up),
+                                contentDescription = null,
+                            )
+                        }
+                    }
+                    IconButton(onClick = { onAction(LibraryAction.OnRefresh) }) {
                         Icon(
-                            painter = painterResource(CoreR.drawable.ic_arrow_down_up),
+                            painter = painterResource(R.drawable.ic_rotate_ccw),
                             contentDescription = null,
                         )
                     }
+                    
+                    // 在选择模式下显示菜单按钮
+                    if (state.selectionMode && state.selectedItems.isNotEmpty()) {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_dots_vertical),
+                                contentDescription = "More options",
+                            )
+                        }
+                        
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("删除") },
+                                onClick = {
+                                    onAction(LibraryAction.OnDeleteSelectedItems)
+                                    showMenu = false
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_trash),
+                                        contentDescription = null
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("标记为已观看") },
+                                onClick = {
+                                    onAction(LibraryAction.OnMarkSelectedAsPlayed)
+                                    showMenu = false
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_eye),
+                                        contentDescription = null
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("添加到播放列表") },
+                                onClick = {
+                                    onAction(LibraryAction.OnAddSelectedToPlaylist)
+                                    showMenu = false
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_plus),
+                                        contentDescription = null
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("收藏") },
+                                onClick = {
+                                    onAction(LibraryAction.OnFavoriteSelectedItems)
+                                    showMenu = false
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_heart),
+                                        contentDescription = null
+                                    )
+                                }
+                            )
+                        }
+                    }
                 },
-                windowInsets = WindowInsets.statusBars.union(WindowInsets.displayCutout),
                 scrollBehavior = scrollBehavior,
             )
         },
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState)
+        },
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
     ) { innerPadding ->
-        Column {
-            ErrorGroup(
-                loadStates = items.loadState,
-                onRefresh = {
-                    items.refresh()
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(contentPadding + innerPadding),
-            )
-            LazyVerticalGrid(
-                columns = GridCellsAdaptiveWithMinColumns(minSize = 120.dp, minColumns = 3),
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = contentPadding + innerPadding,
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
-                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
-            ) {
-                items(
-                    count = items.itemCount,
-                    key = items.itemKey { it.id },
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column {
+                ErrorGroup(
+                    loadStates = items.loadState,
+                    onRefresh = {
+                        onAction(LibraryAction.OnRefresh)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(innerPadding),
+                )
+                LazyVerticalGrid(
+                    columns = GridCellsAdaptiveWithMinColumns(minSize = 120.dp, minColumns = 3),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(
+                            if (state.selectionMode) {
+                                Modifier.graphicsLayer(alpha = 0.7f) // 调浅灰罩颜色
+                            } else {
+                                Modifier
+                            }
+                        ),
+                    contentPadding = innerPadding,
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
                 ) {
-                    val item = items[it]
-                    item?.let { item ->
-                        ItemCard(
-                            item = item,
-                            direction = Direction.VERTICAL,
-                            onClick = {
-                                onAction(LibraryAction.OnItemClick(item))
-                            },
-                            onPlayClick = {
-                                onAction(LibraryAction.OnPlayClick(item))
-                            },
-                            modifier = Modifier.animateItem(),
-                        )
+                    items(
+                        count = items.itemCount,
+                        key = items.itemKey { it.id },
+                    ) {
+                        val item = items[it]
+                        item?.let { item ->
+                            ItemCard(
+                                item = item,
+                                direction = Direction.VERTICAL,
+                                onClick = {
+                                    if (state.selectionMode) {
+                                        onAction(LibraryAction.OnItemSelectionToggle(item))
+                                    } else {
+                                        onAction(LibraryAction.OnItemClick(item))
+                                    }
+                                },
+                                onPlayClick = {
+                                    onAction(LibraryAction.OnPlayClick(item))
+                                },
+                                onLongClick = {
+                                    if (!state.selectionMode) {
+                                        onAction(LibraryAction.OnEnterSelectionMode)
+                                    }
+                                    onAction(LibraryAction.OnItemLongClick(item))
+                                },
+                                selected = state.selectionMode && item in state.selectedItems,
+                                isDuplicate = item in state.duplicateItems,
+                                modifier = Modifier.animateItem(),
+                            )
+                        }
                     }
                 }
+            }
+            
+            // 在选择模式下添加半透明覆盖层以增强视觉效果，但排除已选中的项目
+            if (state.selectionMode) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer(alpha = 0.2f)
+                        .background(Color.Black)
+                )
             }
         }
     }
@@ -217,8 +334,12 @@ private fun LibraryScreenLayout(
         SortByDialog(
             currentSortBy = state.sortBy,
             currentSortOrder = state.sortOrder,
+            showOnlyDuplicates = state.showOnlyDuplicates,
             onUpdate = { sortBy, sortOrder ->
                 onAction(LibraryAction.ChangeSorting(sortBy, sortOrder))
+            },
+            onToggleShowOnlyDuplicates = {
+                onAction(LibraryAction.OnToggleShowOnlyDuplicates)
             },
             onDismissRequest = {
                 showSortByDialog = false
@@ -258,18 +379,5 @@ private fun ErrorGroup(loadStates: CombinedLoadStates, onRefresh: () -> Unit, mo
                 onDismissRequest = { showErrorDialog = false },
             )
         }
-    }
-}
-
-@PreviewScreenSizes
-@Composable
-private fun LibraryScreenLayoutPreview() {
-    val items: Flow<PagingData<FindroidItem>> = flowOf(PagingData.from(dummyMovies))
-    FindroidTheme {
-        LibraryScreenLayout(
-            libraryName = "Movies",
-            state = LibraryState(items = items),
-            onAction = {},
-        )
     }
 }

@@ -29,6 +29,8 @@ import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.DeviceOptionsDto
@@ -39,6 +41,7 @@ import org.jellyfin.sdk.model.api.ItemFilter
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.MediaType
 import org.jellyfin.sdk.model.api.PlaybackInfoDto
+import org.jellyfin.sdk.model.api.PlayAccess
 import org.jellyfin.sdk.model.api.PublicSystemInfo
 import org.jellyfin.sdk.model.api.SortOrder
 import org.jellyfin.sdk.model.api.SubtitleDeliveryMethod
@@ -498,6 +501,47 @@ class JellyfinRepositoryImpl(
             } catch (_: Exception) {
                 database.setUserDataToBeSynced(jellyfinApi.userId!!, itemId, true)
             }
+        }
+    }
+
+    // 添加删除项目的方法实现
+    override suspend fun deleteItems(itemIds: List<UUID>): Boolean = withContext(Dispatchers.IO) {
+        try {
+            // 对每个项目分别调用删除方法
+            for (itemId in itemIds) {
+                // 使用HTTP DELETE请求直接删除项目
+                val url = "${jellyfinApi.api.baseUrl}/Items/$itemId"
+                val requestBuilder = Request.Builder()
+                    .url(url)
+                    .delete()
+                
+                // 添加认证头
+                val token = jellyfinApi.api.accessToken
+                if (token != null) {
+                    requestBuilder.addHeader("Authorization", "MediaBrowser Token=\"$token\"")
+                    requestBuilder.addHeader("X-Emby-Token", token)
+                }
+                
+                // 添加用户ID到请求头
+                jellyfinApi.userId?.let { userId ->
+                    requestBuilder.addHeader("X-Emby-UserId", userId.toString())
+                }
+                
+                // 发送请求
+                val client = OkHttpClient()
+                val request = requestBuilder.build()
+                val response = client.newCall(request).execute()
+                
+                // 检查响应状态
+                if (!response.isSuccessful) {
+                    Timber.e("Failed to delete item: $itemId, status code: ${response.code}")
+                    return@withContext false
+                }
+            }
+            return@withContext true
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to delete items: $itemIds")
+            return@withContext false
         }
     }
 

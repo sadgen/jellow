@@ -1,6 +1,8 @@
 package dev.jdtech.jellyfin.presentation.film.components
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -30,12 +33,16 @@ import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ItemCard(
     item: FindroidItem,
     direction: Direction,
     onClick: (FindroidItem) -> Unit,
     onPlayClick: (FindroidItem) -> Unit = {},
+    onLongClick: (() -> Unit)? = null,
+    selected: Boolean = false,
+    isDuplicate: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val width = when (direction) {
@@ -46,14 +53,18 @@ fun ItemCard(
         modifier = modifier
             .width(width.dp)
             .clip(MaterialTheme.shapes.small)
-            .clickable(
+            .combinedClickable(
                 onClick = {
                     onClick(item)
                 },
-            ),
+                onLongClick = onLongClick
+            )
+            .then(if (selected) Modifier.clip(MaterialTheme.shapes.small) else Modifier),
     ) {
         Surface(
             shape = MaterialTheme.shapes.small,
+            color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+            border = if (isDuplicate) BorderStroke(2.dp, Color.Red) else null
         ) {
             Box {
                 ItemPoster(
@@ -76,6 +87,34 @@ fun ItemCard(
                     )
                 }
                 
+                // Show selection indicator when in selection mode
+                if (selected) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(MaterialTheme.spacings.small)
+                            .size(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Surface(
+                            shape = MaterialTheme.shapes.small,
+                            color = Color.Red  // 改为红底
+                        ) {
+                            Box(
+                                modifier = Modifier.size(24.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_check),
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+                
                 // 添加透明播放按钮
                 IconButton(
                     onClick = { onPlayClick(item) },
@@ -87,7 +126,7 @@ fun ItemCard(
                     Icon(
                         painter = painterResource(R.drawable.ic_play),
                         contentDescription = "Play",
-                        tint = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.8f),
+                        tint = Color.White.copy(alpha = 0.8f),
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -99,6 +138,9 @@ fun ItemCard(
             style = MaterialTheme.typography.bodyMedium,
             maxLines = if (direction == Direction.HORIZONTAL) 1 else 2,
             overflow = TextOverflow.Ellipsis,
+            color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer 
+                   else if (isDuplicate) Color.Red 
+                   else MaterialTheme.colorScheme.onSurface
         )
         if (item is FindroidEpisode) {
             Text(
@@ -109,7 +151,9 @@ fun ItemCard(
                     item.name,
                 ),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+                color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) 
+                      else if (isDuplicate) Color.Red.copy(alpha = 0.8f)
+                      else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
