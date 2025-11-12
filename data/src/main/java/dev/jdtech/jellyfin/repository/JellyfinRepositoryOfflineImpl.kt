@@ -261,6 +261,11 @@ class JellyfinRepositoryOfflineImpl(
         }
     }
 
+    override suspend fun deleteItems(itemIds: List<UUID>): Boolean {
+        // 离线模式下无法删除项目
+        return false
+    }
+
     override fun getBaseUrl(): String {
         return ""
     }

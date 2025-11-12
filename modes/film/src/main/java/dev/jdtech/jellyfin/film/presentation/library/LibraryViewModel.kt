@@ -2,14 +2,20 @@ package dev.jdtech.jellyfin.film.presentation.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import androidx.paging.filter
+import androidx.paging.map
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.jdtech.jellyfin.models.CollectionType
+import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.SortBy
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.SortOrder
@@ -63,11 +69,56 @@ constructor(
                     recursive = recursive,
                     sortBy = if (libraryType == CollectionType.TvShows && sortBy == SortBy.DATE_PLAYED) SortBy.SERIES_DATE_PLAYED else sortBy, // Jellyfin uses a different enum for sorting series by data played
                     sortOrder = sortOrder,
-                ).cachedIn(viewModelScope)
+                )
+                .map { pagingData ->
+                    if (_state.value.showOnlyDuplicates && _state.value.duplicateItems.isNotEmpty()) {
+                        pagingData.filter { item -> item in _state.value.duplicateItems }
+                    } else {
+                        pagingData
+                    }
+                }
+                .cachedIn(viewModelScope)
+                
                 _state.emit(_state.value.copy(items = items))
+                
+                // 检测重复项
+                detectDuplicateItems()
             } catch (e: Exception) {
                 _state.emit(_state.value.copy(error = e))
             }
+        }
+    }
+
+    private suspend fun detectDuplicateItems() {
+        try {
+            val items = jellyfinRepository.getItems(
+                parentId = parentId,
+                recursive = true
+            )
+            
+            val duplicateItems = mutableSetOf<FindroidItem>()
+            val namePrefixes = mutableMapOf<String, MutableList<FindroidItem>>()
+            
+            // 收集所有项目并按名称前缀分组
+            items.forEach { item ->
+                val prefix = item.name.substringBefore(' ', item.name)
+                namePrefixes.getOrPut(prefix) { mutableListOf() }.add(item)
+            }
+            
+            // 标记重复项
+            namePrefixes.values.forEach { itemsWithSamePrefix ->
+                if (itemsWithSamePrefix.size > 1) {
+                    duplicateItems.addAll(itemsWithSamePrefix)
+                }
+            }
+            
+            // 更新状态
+            _state.emit(_state.value.copy(duplicateItems = duplicateItems))
+            
+            // 移除自动刷新调用以避免无限循环
+            // 如果启用了仅显示重复项，则在切换选项时手动刷新数据
+        } catch (e: Exception) {
+            // 忽略检测错误，不影响主要功能
         }
     }
 
@@ -94,6 +145,141 @@ constructor(
             is LibraryAction.ChangeSorting -> {
                 if (action.sortBy != this.sortBy || action.sortOrder != this.sortOrder) {
                     setSorting(sortBy = action.sortBy, sortOrder = action.sortOrder)
+                    loadItems()
+                }
+            }
+            is LibraryAction.OnEnterSelectionMode -> {
+                viewModelScope.launch {
+                    _state.emit(_state.value.copy(selectionMode = true))
+                }
+            }
+            is LibraryAction.OnExitSelectionMode -> {
+                viewModelScope.launch {
+                    _state.emit(_state.value.copy(selectionMode = false, selectedItems = emptySet()))
+                }
+            }
+            is LibraryAction.OnItemLongClick -> {
+                viewModelScope.launch {
+                    val selectedItems = _state.value.selectedItems.toMutableSet()
+                    if (selectedItems.contains(action.item)) {
+                        selectedItems.remove(action.item)
+                    } else {
+                        selectedItems.add(action.item)
+                    }
+                    _state.emit(_state.value.copy(
+                        selectionMode = true,
+                        selectedItems = selectedItems
+                    ))
+                }
+            }
+            is LibraryAction.OnItemSelectionToggle -> {
+                viewModelScope.launch {
+                    val selectedItems = _state.value.selectedItems.toMutableSet()
+                    if (selectedItems.contains(action.item)) {
+                        selectedItems.remove(action.item)
+                    } else {
+                        selectedItems.add(action.item)
+                    }
+                    _state.emit(_state.value.copy(selectedItems = selectedItems))
+                }
+            }
+            is LibraryAction.OnSelectAllItems -> {
+                viewModelScope.launch {
+                    _state.emit(_state.value.copy(selectedItems = action.items.toSet()))
+                }
+            }
+            is LibraryAction.OnClearSelection -> {
+                viewModelScope.launch {
+                    _state.emit(_state.value.copy(selectedItems = emptySet()))
+                }
+            }
+            is LibraryAction.OnDeleteSelectedItems -> {
+                viewModelScope.launch {
+                    // 执行删除操作
+                    val selectedItems = _state.value.selectedItems
+                    val itemIds = selectedItems.map { it.id }
+                    val success = jellyfinRepository.deleteItems(itemIds)
+                    
+                    if (success) {
+                        // 显示删除成功的消息
+                        _state.emit(_state.value.copy(
+                            selectionMode = false,
+                            selectedItems = emptySet(),
+                            showSnackBar = true,
+                            snackBarMessage = "删除成功"
+                        ))
+                        
+                        // 重新加载数据以确保UI同步
+                        loadItems()
+                    } else {
+                        // 删除失败，显示错误消息
+                        _state.emit(_state.value.copy(
+                            selectionMode = false,
+                            selectedItems = emptySet(),
+                            showSnackBar = true,
+                            snackBarMessage = "删除失败"
+                        ))
+                    }
+                    
+                    // 延迟重置SnackBar状态
+                    delay(3000)
+                    _state.emit(_state.value.copy(
+                        showSnackBar = false,
+                        snackBarMessage = ""
+                    ))
+                }
+            }
+            is LibraryAction.OnMarkSelectedAsPlayed -> {
+                viewModelScope.launch {
+                    // 标记为已观看
+                    val selectedItems = _state.value.selectedItems
+                    selectedItems.forEach { item ->
+                        viewModelScope.launch {
+                            jellyfinRepository.markAsPlayed(item.id)
+                        }
+                    }
+                    // 操作完成后退出选择模式
+                    _state.emit(_state.value.copy(
+                        selectionMode = false,
+                        selectedItems = emptySet()
+                    ))
+                    // 移除自动刷新以避免与其他功能冲突
+                }
+            }
+            is LibraryAction.OnAddSelectedToPlaylist -> {
+                viewModelScope.launch {
+                    // 添加到播放列表
+                    val selectedItems = _state.value.selectedItems
+                    // 这里应该实现添加到播放列表的逻辑
+                    // 例如：playlistRepository.addItemsToPlaylist(selectedItems)
+                    
+                    // 操作完成后退出选择模式
+                    _state.emit(_state.value.copy(
+                        selectionMode = false,
+                        selectedItems = emptySet()
+                    ))
+                }
+            }
+            is LibraryAction.OnFavoriteSelectedItems -> {
+                viewModelScope.launch {
+                    // 收藏项目
+                    val selectedItems = _state.value.selectedItems
+                    selectedItems.forEach { item ->
+                        viewModelScope.launch {
+                            jellyfinRepository.markAsFavorite(item.id)
+                        }
+                    }
+                    // 操作完成后退出选择模式
+                    _state.emit(_state.value.copy(
+                        selectionMode = false,
+                        selectedItems = emptySet()
+                    ))
+                }
+            }
+            is LibraryAction.OnToggleShowOnlyDuplicates -> {
+                viewModelScope.launch {
+                    val newShowOnlyDuplicates = !_state.value.showOnlyDuplicates
+                    _state.emit(_state.value.copy(showOnlyDuplicates = newShowOnlyDuplicates))
                     loadItems()
                 }
             }
