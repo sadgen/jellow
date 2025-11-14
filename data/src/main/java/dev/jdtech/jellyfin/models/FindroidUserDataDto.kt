@@ -13,6 +13,7 @@ data class FindroidUserDataDto(
     @ColumnInfo(defaultValue = "0")
     val playCount: Int,
     val playbackPositionTicks: Long,
+    val playCount: Int,
     val toBeSynced: Boolean = false,
 )
 
@@ -24,5 +25,6 @@ fun FindroidItem.toFindroidUserDataDto(userId: UUID): FindroidUserDataDto {
         favorite = favorite,
         playCount = playCount,
         playbackPositionTicks = playbackPositionTicks,
+        playCount = playCount,
     )
 }

@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 7,
-    "identityHash": "65535840b77cec440a2648da9b26dd8c",
+    "identityHash": "83e9aa7146f164aecb69b11def218502",
     "entities": [
       {
         "tableName": "servers",
@@ -656,7 +656,7 @@
       },
       {
         "tableName": "userdata",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`userId` TEXT NOT NULL, `itemId` TEXT NOT NULL, `played` INTEGER NOT NULL, `favorite` INTEGER NOT NULL, `playbackPositionTicks` INTEGER NOT NULL, `toBeSynced` INTEGER NOT NULL, PRIMARY KEY(`userId`, `itemId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`userId` TEXT NOT NULL, `itemId` TEXT NOT NULL, `played` INTEGER NOT NULL, `favorite` INTEGER NOT NULL, `playbackPositionTicks` INTEGER NOT NULL, `playCount` INTEGER NOT NULL, `toBeSynced` INTEGER NOT NULL, PRIMARY KEY(`userId`, `itemId`))",
         "fields": [
           {
             "fieldPath": "userId",
@@ -685,6 +685,12 @@
           {
             "fieldPath": "playbackPositionTicks",
             "columnName": "playbackPositionTicks",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "playCount",
+            "columnName": "playCount",
             "affinity": "INTEGER",
             "notNull": true
           },
@@ -829,7 +835,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '65535840b77cec440a2648da9b26dd8c')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '83e9aa7146f164aecb69b11def218502')"
     ]
   }
 }
