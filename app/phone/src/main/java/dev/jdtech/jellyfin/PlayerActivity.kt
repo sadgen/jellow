@@ -107,6 +107,9 @@ class PlayerActivity : BasePlayerActivity() {
                 if (visibility == View.GONE) {
                     hideSystemUI()
                 }
+                // 同步进度条容器的显示/隐藏状态
+                val progressBarContainer = binding.playerView.findViewById<View>(R.id.progress_bar_container)
+                progressBarContainer.visibility = visibility
                 // Update progress bar position based on orientation
                 updateProgressBarPosition()
             },
@@ -181,6 +184,9 @@ class PlayerActivity : BasePlayerActivity() {
                                     if (skipButtonTimeoutExpired && currentSegment != null) {
                                         skipSegmentButton.visibility = visibility
                                     }
+                                    // 同步进度条容器的显示/隐藏状态
+                                    val progressBarContainer = binding.playerView.findViewById<View>(R.id.progress_bar_container)
+                                    progressBarContainer.visibility = visibility
                                     // Update progress bar position based on orientation
                                     updateProgressBarPosition()
                                 },
@@ -504,23 +510,10 @@ class PlayerActivity : BasePlayerActivity() {
     
     /**
      * Update the position of the progress bar based on screen orientation
-     * In portrait mode, move it closer to the bottom for easier thumb access
+     * Since controls are now at the bottom, we don't need to adjust the position
      */
     private fun updateProgressBarPosition() {
-        val timeBar = binding.playerView.findViewById<DefaultTimeBar>(R.id.exo_progress)
-        
-        if (timeBar != null) {
-            val layoutParams = timeBar.layoutParams as ViewGroup.MarginLayoutParams
-            
-            if (resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT) {
-                // In portrait mode, reduce bottom margin to bring progress bar closer to the bottom
-                layoutParams.bottomMargin = 866 // Reduced margin for easier thumb access
-            } else {
-                // In landscape mode, keep the default margin
-                layoutParams.bottomMargin = 16
-            }
-            
-            timeBar.layoutParams = layoutParams
-        }
+        // No longer needed as controls are now at the bottom
+        // Keeping the method for compatibility
     }
 }
