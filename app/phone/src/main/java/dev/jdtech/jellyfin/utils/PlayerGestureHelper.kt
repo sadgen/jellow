@@ -35,6 +35,13 @@ import kotlin.math.abs
 import kotlinx.coroutines.Dispatchers
 import timber.log.Timber
 
+// 扩展函数，将dp转换为px
+private val Float.dp: Float
+    get() = this * Resources.getSystem().displayMetrics.density
+
+private val Int.dp: Int
+    get() = (this * Resources.getSystem().displayMetrics.density).toInt()
+
 class PlayerGestureHelper(
     private val appPreferences: AppPreferences,
     private val activity: PlayerActivity,
@@ -549,6 +556,31 @@ class PlayerGestureHelper(
             val bitmap = trickplay.images[position.div(trickplay.interval).toInt()]
 
             if (currentTrickplayBitmap != bitmap) {
+                // 根据图片原始比例调整ImageView尺寸，放大图片
+                val bitmapWidth = bitmap.width
+                val bitmapHeight = bitmap.height
+                val aspectRatio = bitmapWidth.toFloat() / bitmapHeight.toFloat()
+                
+                // 设置更大的最大宽度和高度，放大trick play图片
+                val maxWidth = 360.dp.toFloat()  // 从272dp增加到360dp
+                val maxHeight = 200.dp.toFloat() // 从153dp增加到200dp
+                
+                // 根据比例计算实际尺寸
+                val (targetWidth, targetHeight) = if (aspectRatio > maxWidth / maxHeight) {
+                    // 宽度受限
+                    maxWidth to (maxWidth / aspectRatio)
+                } else {
+                    // 高度受限
+                    (maxHeight * aspectRatio) to maxHeight
+                }
+                
+                // 更新ImageView尺寸
+                activity.binding.progressScrubberTrickplay.layoutParams = 
+                    activity.binding.progressScrubberTrickplay.layoutParams.apply {
+                        width = targetWidth.toInt()
+                        height = targetHeight.toInt()
+                    }
+                
                 activity.binding.progressScrubberTrickplay.load(bitmap) {
                     coroutineContext(Dispatchers.Main.immediate)
                     crossfade(false)

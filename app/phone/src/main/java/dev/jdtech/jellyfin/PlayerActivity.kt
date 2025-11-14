@@ -210,7 +210,12 @@ class PlayerActivity : BasePlayerActivity() {
                 if (visibility == View.GONE) {
                     hideSystemUI()
                 }
-            }
+                // 同步进度条容器的显示/隐藏状态
+                val progressBarContainer = binding.playerView.findViewById<View>(R.id.progress_bar_container)
+                progressBarContainer.visibility = visibility
+                // Update progress bar position based on orientation
+                updateProgressBarPosition()
+            },
         )
 
         // Disable clipping on the internal content frame to allow panning zoomed content
@@ -344,7 +349,12 @@ class PlayerActivity : BasePlayerActivity() {
                                     if (skipButtonTimeoutExpired && currentSegment != null) {
                                         skipSegmentButton.visibility = visibility
                                     }
-                                }
+                                    // 同步进度条容器的显示/隐藏状态
+                                    val progressBarContainer = binding.playerView.findViewById<View>(R.id.progress_bar_container)
+                                    progressBarContainer.visibility = visibility
+                                    // Update progress bar position based on orientation
+                                    updateProgressBarPosition()
+                                },
                             )
 
                             // Trickplay
@@ -1075,9 +1085,7 @@ class PlayerActivity : BasePlayerActivity() {
             }
         }
     }
-
-
-    private inner class StandardVideoGyroController : SensorEventListener {
+private inner class StandardVideoGyroController : SensorEventListener {
         private val sensorManager by lazy { getSystemService(Context.SENSOR_SERVICE) as SensorManager }
         private val gyroscope by lazy { sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE) }
         private var isEnabled = false
@@ -1254,5 +1262,13 @@ class PlayerActivity : BasePlayerActivity() {
                 ((renderedHeight - viewHeight) / 2.0) / renderedHeight.toDouble()
             } else 0.0
         }
+    
+    /**
+     * Update the position of the progress bar based on screen orientation
+     * Since controls are now at the bottom, we don't need to adjust the position
+     */
+    private fun updateProgressBarPosition() {
+        // No longer needed as controls are now at the bottom
+        // Keeping the method for compatibility
     }
 }
