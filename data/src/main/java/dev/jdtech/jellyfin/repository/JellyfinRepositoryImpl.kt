@@ -100,7 +100,7 @@ class JellyfinRepositoryImpl(
     override suspend fun getLibraries(): List<FindroidCollection> =
         withContext(Dispatchers.IO) {
             jellyfinApi.itemsApi.getItems(
-                jellyfinApi.userId!!,
+                userId = jellyfinApi.userId!!,
             ).content.items
                 .mapNotNull { it.toFindroidCollection(this@JellyfinRepositoryImpl) }
         }
@@ -116,7 +116,7 @@ class JellyfinRepositoryImpl(
     ): List<FindroidItem> =
         withContext(Dispatchers.IO) {
             jellyfinApi.itemsApi.getItems(
-                jellyfinApi.userId!!,
+                userId = jellyfinApi.userId!!,
                 parentId = parentId,
                 includeItemTypes = includeTypes,
                 recursive = recursive,
@@ -164,7 +164,7 @@ class JellyfinRepositoryImpl(
         recursive: Boolean,
     ): List<FindroidItem> = withContext(Dispatchers.IO) {
         jellyfinApi.itemsApi.getItems(
-            jellyfinApi.userId!!,
+            userId = jellyfinApi.userId!!,
             personIds = personIds,
             includeItemTypes = includeTypes,
             recursive = recursive,
@@ -177,7 +177,7 @@ class JellyfinRepositoryImpl(
     override suspend fun getFavoriteItems(): List<FindroidItem> =
         withContext(Dispatchers.IO) {
             jellyfinApi.itemsApi.getItems(
-                jellyfinApi.userId!!,
+                userId = jellyfinApi.userId!!,
                 filters = listOf(ItemFilter.IS_FAVORITE),
                 includeItemTypes = listOf(
                     BaseItemKind.MOVIE,

@@ -50,5 +50,9 @@ val MIGRATION_6_7 = object : Migration(startVersion = 6, endVersion = 7) {
         db.execSQL(
             "CREATE TABLE segments (`itemId` TEXT NOT NULL, `type` TEXT NOT NULL, `startTicks` INTEGER NOT NULL, `endTicks` INTEGER NOT NULL, PRIMARY KEY(`itemId`, `type`), FOREIGN KEY(`itemId`) REFERENCES `episodes`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         )
+        // 添加 playCount 字段到 userdata 表
+        db.execSQL(
+            "ALTER TABLE userdata ADD COLUMN playCount INTEGER NOT NULL DEFAULT 0",
+        )
     }
 }

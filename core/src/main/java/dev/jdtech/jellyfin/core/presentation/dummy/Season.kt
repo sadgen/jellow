@@ -20,4 +20,5 @@ val dummySeason = FindroidSeason(
     canDownload = false,
     unplayedItemCount = null,
     images = FindroidImages(),
+    playCount = 0,
 )

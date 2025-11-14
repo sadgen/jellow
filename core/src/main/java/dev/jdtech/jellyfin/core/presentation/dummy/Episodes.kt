@@ -57,6 +57,7 @@ val dummyEpisode = FindroidEpisode(
     images = FindroidImages(),
     chapters = emptyList(),
     trickplayInfo = null,
+    playCount = 5,
 )
 
 val dummyEpisodes = listOf(

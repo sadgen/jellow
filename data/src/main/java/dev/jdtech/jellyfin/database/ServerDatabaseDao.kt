@@ -241,6 +241,7 @@ interface ServerDatabaseDao {
                 played = false,
                 favorite = false,
                 playbackPositionTicks = 0L,
+                playCount = 0,
             )
             insertUserData(userData)
         }

@@ -23,6 +23,7 @@ data class FindroidSeason(
     override val runtimeTicks: Long = 0L,
     override val playbackPositionTicks: Long = 0L,
     override val unplayedItemCount: Int?,
+    override val playCount: Int,
     override val images: FindroidImages,
     override val chapters: List<FindroidChapter> = emptyList(),
 ) : FindroidItem
@@ -40,6 +41,7 @@ fun BaseItemDto.toFindroidSeason(
         canPlay = playAccess != PlayAccess.NONE,
         canDownload = canDownload == true,
         unplayedItemCount = userData?.unplayedItemCount,
+        playCount = userData?.playCount ?: 0,
         indexNumber = indexNumber ?: 0,
         sources = emptyList(),
         episodes = emptyList(),
@@ -66,6 +68,7 @@ fun FindroidSeasonDto.toFindroidSeason(database: ServerDatabaseDao, userId: UUID
         episodes = emptyList(),
         seriesId = seriesId,
         seriesName = seriesName,
+        playCount = userData.playCount,
         images = FindroidImages(),
     )
 }
