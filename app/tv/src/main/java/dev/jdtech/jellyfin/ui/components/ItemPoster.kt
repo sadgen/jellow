@@ -68,29 +68,33 @@ fun ItemPoster(
         )
         
         // 播放次数显示 - 左下角
-        if (item.playCount > 0) {
-            Row(
+        if (item.playCount >= 0) {
+            Box(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .padding(8.dp)
-                    .clip(MaterialTheme.shapes.small)
-                    .background(Color.Black.copy(alpha = 0.7f))
-                    .padding(horizontal = 6.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    .size(24.dp)
+                    .clip(MaterialTheme.shapes.extraSmall)
+                    .background(Color.White.copy(alpha = 0.9f))
+                    .padding(1.dp)
             ) {
-                Icon(
-                    painter = painterResource(CoreR.drawable.ic_play),
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(12.dp)
-                )
-                Text(
-                    text = item.playCount.toString(),
-                    color = Color.White,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(MaterialTheme.shapes.extraSmall)
+                        .background(
+                            if (item.playCount == 0) Color(0xFFFFA500).copy(alpha = 0.7f) 
+                            else Color(0xFF333333).copy(alpha = 0.7f)
+                        )
+                ) {
+                    Text(
+                        text = if (item.playCount == 0) "—" else item.playCount.toString(),
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
             }
         }
     }
