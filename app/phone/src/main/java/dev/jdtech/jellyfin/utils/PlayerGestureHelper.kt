@@ -54,6 +54,23 @@ class PlayerGestureHelper(
      * Useful on wide-screen phones to remove black bars from some movies.
      */
     var isZoomEnabled = false
+    
+    /**
+     * Tracks the current zoom level for continuous zooming
+     */
+    private var currentZoomLevel: Float = 1.0f
+    
+    /**
+     * Tracks the current video pan position for panning when zoomed
+     */
+    private var videoPanX: Float = 0f
+    private var videoPanY: Float = 0f
+    
+    /**
+     * Tracks the last touch position for panning
+     */
+    private var lastTouchX: Float = 0f
+    private var lastTouchY: Float = 0f
 
     /**
      * Tracks a value during a swipe gesture (between multiple onScroll calls).
@@ -446,6 +463,8 @@ class PlayerGestureHelper(
     private val hideGestureProgressOverlayAction = Runnable {
         activity.binding.progressScrubberLayout.visibility = View.GONE
     }
+    
+    // Note: panGestureDetector has been removed as pan functionality is now integrated into zoomGestureDetector
 
     /**
      * Handles scale/zoom gesture
@@ -453,17 +472,62 @@ class PlayerGestureHelper(
     private val zoomGestureDetector = ScaleGestureDetector(
         playerView.context,
         object : ScaleGestureDetector.OnScaleGestureListener {
-            override fun onScaleBegin(detector: ScaleGestureDetector): Boolean = true
+            override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
+                // Disables zoom gesture if view is locked
+                if (isControlsLocked) return false
+                lastScaleEvent = SystemClock.elapsedRealtime()
+                
+                // Store initial touch position for pan gesture
+                lastTouchX = detector.focusX
+                lastTouchY = detector.focusY
+                
+                return true
+            }
 
             override fun onScale(detector: ScaleGestureDetector): Boolean {
                 // Disables zoom gesture if view is locked
                 if (isControlsLocked) return false
                 lastScaleEvent = SystemClock.elapsedRealtime()
                 val scaleFactor = detector.scaleFactor
-                if (abs(scaleFactor - Constants.ZOOM_SCALE_BASE) > Constants.ZOOM_SCALE_THRESHOLD) {
-                    val enableZoom = scaleFactor > 1
-                    updateZoomMode(enableZoom)
+                
+                // Apply continuous zoom with increased sensitivity and higher max zoom
+                // Increase the zoom sensitivity by applying a power function
+                val adjustedScaleFactor = if (scaleFactor > 1) {
+                    1.0f + (scaleFactor - 1.0f) * 1.5f  // Faster zoom in
+                } else {
+                    1.0f - (1.0f - scaleFactor) * 1.5f  // Faster zoom out
                 }
+                
+                currentZoomLevel *= adjustedScaleFactor
+                // Limit zoom level between 0.5x and 5.0x (increased max zoom)
+                currentZoomLevel = currentZoomLevel.coerceIn(0.5f, 5.0f)
+                
+                updateZoomLevel(currentZoomLevel)
+                
+                // Also handle pan during zoom
+                if (currentZoomLevel > 1.0f) {
+                    val deltaX = detector.focusX - lastTouchX
+                    val deltaY = detector.focusY - lastTouchY
+                    
+                    // Update pan position with corrected direction
+                    // Invert X direction to make it more intuitive (move right to pan right)
+                    videoPanX += deltaX / playerView.width
+                    videoPanY += deltaY / playerView.height
+                    
+                    // Limit pan position based on zoom level
+                    val maxPanX = (currentZoomLevel - 1.0f) * 0.5f
+                    val maxPanY = (currentZoomLevel - 1.0f) * 0.5f
+                    
+                    videoPanX = videoPanX.coerceIn(-maxPanX, maxPanX)
+                    videoPanY = videoPanY.coerceIn(-maxPanY, maxPanY)
+                    
+                    updateVideoPan(videoPanX, videoPanY)
+                    
+                    // Update last touch position
+                    lastTouchX = detector.focusX
+                    lastTouchY = detector.focusY
+                }
+                
                 return true
             }
 
@@ -472,12 +536,34 @@ class PlayerGestureHelper(
     ).apply { isQuickScaleEnabled = false }
 
     fun updateZoomMode(enabled: Boolean) {
-        if (playerView.player is MPVPlayer) {
-            (playerView.player as MPVPlayer).updateZoomMode(enabled)
+        if (enabled) {
+            currentZoomLevel = 1.5f  // Default zoom level when enabling zoom
         } else {
-            playerView.resizeMode = if (enabled) AspectRatioFrameLayout.RESIZE_MODE_ZOOM else AspectRatioFrameLayout.RESIZE_MODE_FIT
+            currentZoomLevel = 1.0f  // Reset to normal when disabling zoom
         }
+        updateZoomLevel(currentZoomLevel)
         isZoomEnabled = enabled
+    }
+    
+    private fun updateZoomLevel(zoomLevel: Float) {
+        if (playerView.player is MPVPlayer) {
+            (playerView.player as MPVPlayer).updateZoomLevel(zoomLevel)
+        } else {
+            // For non-MPV players, use the existing resize modes
+            if (zoomLevel > 1.0f) {
+                playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+            } else {
+                playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+            }
+        }
+        isZoomEnabled = zoomLevel > 1.0f
+    }
+    
+    private fun updateVideoPan(panX: Float, panY: Float) {
+        if (playerView.player is MPVPlayer) {
+            (playerView.player as MPVPlayer).updateVideoPan(panX, panY)
+        }
+        // For non-MPV players, panning is not supported
     }
 
     private fun releaseAction(event: MotionEvent) {
@@ -636,6 +722,13 @@ class PlayerGestureHelper(
         playerView.setOnTouchListener { _, event ->
             if (playerView.useController) {
                 currentNumberOfPointers = event.pointerCount
+                
+                // Store initial touch position for pan gesture
+                if (event.action == MotionEvent.ACTION_DOWN || event.actionMasked == MotionEvent.ACTION_POINTER_DOWN) {
+                    lastTouchX = event.getX(0)
+                    lastTouchY = event.getY(0)
+                }
+                
                 when (event.pointerCount) {
                     1 -> {
                         tapGestureDetector.onTouchEvent(event)
@@ -643,7 +736,10 @@ class PlayerGestureHelper(
                         if (appPreferences.getValue(appPreferences.playerGesturesSeek)) seekGestureDetector.onTouchEvent(event)
                     }
                     2 -> {
-                        if (appPreferences.getValue(appPreferences.playerGesturesZoom)) zoomGestureDetector.onTouchEvent(event)
+                        // Handle zoom gesture (pan is handled within the zoom gesture detector)
+                        if (appPreferences.getValue(appPreferences.playerGesturesZoom)) {
+                            zoomGestureDetector.onTouchEvent(event)
+                        }
                     }
                 }
             }

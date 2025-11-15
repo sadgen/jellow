@@ -38,19 +38,6 @@
       "filters": [
         {
           "filterType": "ABI",
-          "value": "x86_64"
-        }
-      ],
-      "attributes": [],
-      "versionCode": 29,
-      "versionName": "0.15.3",
-      "outputFile": "findroid-v0.15.3-libre-x86_64.apk"
-    },
-    {
-      "type": "ONE_OF_MANY",
-      "filters": [
-        {
-          "filterType": "ABI",
           "value": "x86"
         }
       ],
@@ -58,6 +45,19 @@
       "versionCode": 29,
       "versionName": "0.15.3",
       "outputFile": "findroid-v0.15.3-libre-x86.apk"
+    },
+    {
+      "type": "ONE_OF_MANY",
+      "filters": [
+        {
+          "filterType": "ABI",
+          "value": "x86_64"
+        }
+      ],
+      "attributes": [],
+      "versionCode": 29,
+      "versionName": "0.15.3",
+      "outputFile": "findroid-v0.15.3-libre-x86_64.apk"
     }
   ],
   "elementType": "File",
@@ -68,8 +68,8 @@
       "baselineProfiles": [
         "baselineProfiles/1/findroid-v0.15.3-libre-armeabi-v7a.dm",
         "baselineProfiles/1/findroid-v0.15.3-libre-arm64-v8a.dm",
-        "baselineProfiles/1/findroid-v0.15.3-libre-x86_64.dm",
-        "baselineProfiles/1/findroid-v0.15.3-libre-x86.dm"
+        "baselineProfiles/1/findroid-v0.15.3-libre-x86.dm",
+        "baselineProfiles/1/findroid-v0.15.3-libre-x86_64.dm"
       ]
     },
     {
@@ -78,8 +78,8 @@
       "baselineProfiles": [
         "baselineProfiles/0/findroid-v0.15.3-libre-armeabi-v7a.dm",
         "baselineProfiles/0/findroid-v0.15.3-libre-arm64-v8a.dm",
-        "baselineProfiles/0/findroid-v0.15.3-libre-x86_64.dm",
-        "baselineProfiles/0/findroid-v0.15.3-libre-x86.dm"
+        "baselineProfiles/0/findroid-v0.15.3-libre-x86.dm",
+        "baselineProfiles/0/findroid-v0.15.3-libre-x86_64.dm"
       ]
     }
   ],

@@ -1420,14 +1420,47 @@ class MPVPlayer(
 
     fun updateZoomMode(enabled: Boolean) {
         if (enabled) {
-            MPVLib.setOptionString("panscan", "1")
+            // Use video-zoom for continuous zooming instead of panscan
+            MPVLib.setOptionString("video-zoom", "0.5")  // Default zoom level
             MPVLib.setOptionString("sub-use-margins", "yes")
             MPVLib.setOptionString("sub-ass-force-margins", "yes")
         } else {
-            MPVLib.setOptionString("panscan", "0")
+            MPVLib.setOptionString("video-zoom", "0")  // Reset zoom
             MPVLib.setOptionString("sub-use-margins", "no")
             MPVLib.setOptionString("sub-ass-force-margins", "no")
         }
+    }
+    
+    fun updateZoomLevel(zoomLevel: Float) {
+        // Convert zoom level to video-zoom parameter
+        // video-zoom parameter: 0 = no zoom, positive values = zoom in, negative values = zoom out
+        // We'll use a mapping where 1.0f = 0 (no zoom), 5.0f = 2.0 (max zoom)
+        // This provides a more aggressive zoom for higher zoom levels
+        val videoZoom = when {
+            zoomLevel <= 1.0f -> (zoomLevel - 1.0f) * 0.5f  // Zoom out
+            zoomLevel <= 2.0f -> (zoomLevel - 1.0f) * 0.5f  // Moderate zoom
+            else -> 0.5f + (zoomLevel - 2.0f) * 0.75f      // Aggressive zoom for higher levels
+        }
+        
+        // Set the video-zoom parameter
+        MPVLib.setOptionString("video-zoom", videoZoom.toString())
+        
+        // Always enable subtitle margins when zoomed
+        if (zoomLevel > 1.0f) {
+            MPVLib.setOptionString("sub-use-margins", "yes")
+            MPVLib.setOptionString("sub-ass-force-margins", "yes")
+        } else {
+            MPVLib.setOptionString("sub-use-margins", "no")
+            MPVLib.setOptionString("sub-ass-force-margins", "no")
+        }
+    }
+    
+    fun updateVideoPan(panX: Float, panY: Float) {
+        // Set the video-pan-x and video-pan-y parameters
+        // These parameters control the position of the video when zoomed
+        // Values are typically between -1.0 and 1.0
+        MPVLib.setOptionString("video-pan-x", panX.toString())
+        MPVLib.setOptionString("video-pan-y", panY.toString())
     }
 
     private val surfaceHolder: SurfaceHolder.Callback = object : SurfaceHolder.Callback {
