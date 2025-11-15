@@ -16,6 +16,7 @@ import android.os.Looper
 import android.os.Process
 import android.provider.Settings
 import android.util.Rational
+import android.view.MotionEvent
 import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
@@ -24,6 +25,7 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.Space
 import android.widget.TextView
 import androidx.activity.viewModels
@@ -35,6 +37,7 @@ import androidx.media3.common.C
 import androidx.media3.ui.DefaultTimeBar
 import androidx.media3.ui.PlayerControlView
 import androidx.media3.ui.PlayerView
+import kotlin.UninitializedPropertyAccessException
 import dagger.hilt.android.AndroidEntryPoint
 import dev.jdtech.jellyfin.databinding.ActivityPlayerBinding
 import dev.jdtech.jellyfin.player.local.presentation.PlayerEvents
@@ -66,6 +69,9 @@ class PlayerActivity : BasePlayerActivity() {
     private var skipButtonTimeoutExpired: Boolean = true
 
     private lateinit var skipSegmentButton: Button
+    private lateinit var zoomControls: LinearLayout
+    private lateinit var joystickContainer: FrameLayout
+    private lateinit var joystickHandle: View
 
     private val isPipSupported by lazy {
         // Check if device has PiP feature
@@ -110,6 +116,16 @@ class PlayerActivity : BasePlayerActivity() {
                 // 同步进度条容器的显示/隐藏状态
                 val progressBarContainer = binding.playerView.findViewById<View>(R.id.progress_bar_container)
                 progressBarContainer.visibility = visibility
+                
+                // 同步缩放控制和摇杆的显示/隐藏状态
+                // Note: These will be initialized after this listener is set
+                try {
+                    zoomControls.visibility = visibility
+                    joystickContainer.visibility = visibility
+                } catch (e: UninitializedPropertyAccessException) {
+                    // Variables not yet initialized, will be handled in the initialization code
+                }
+                
                 // Update progress bar position based on orientation
                 updateProgressBarPosition()
             },
@@ -146,6 +162,24 @@ class PlayerActivity : BasePlayerActivity() {
         val pipButton = binding.playerView.findViewById<ImageButton>(R.id.btn_pip)
         val lockButton = binding.playerView.findViewById<ImageButton>(R.id.btn_lockview)
         val unlockButton = binding.playerView.findViewById<ImageButton>(R.id.btn_unlock)
+        
+        // Zoom controls
+        val zoomInButton = binding.playerView.findViewById<ImageButton>(R.id.btn_zoom_in)
+        val zoomOutButton = binding.playerView.findViewById<ImageButton>(R.id.btn_zoom_out)
+        val resetButton = binding.playerView.findViewById<ImageButton>(R.id.btn_reset)
+        zoomControls = binding.playerView.findViewById(R.id.zoom_controls)
+        
+        // Joystick control
+        joystickContainer = binding.playerView.findViewById(R.id.joystick_container)
+        joystickHandle = binding.playerView.findViewById(R.id.joystick_handle)
+        
+        // Initialize zoom controls and joystick visibility
+        zoomControls.visibility = View.VISIBLE
+        joystickContainer.visibility = View.VISIBLE
+        
+        // Initialize progress bar container visibility
+        val progressBarContainer = binding.playerView.findViewById<View>(R.id.progress_bar_container)
+        progressBarContainer.visibility = View.VISIBLE
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -187,6 +221,11 @@ class PlayerActivity : BasePlayerActivity() {
                                     // 同步进度条容器的显示/隐藏状态
                                     val progressBarContainer = binding.playerView.findViewById<View>(R.id.progress_bar_container)
                                     progressBarContainer.visibility = visibility
+                                    
+                                    // 同步缩放控制和摇杆的显示/隐藏状态
+                                    zoomControls.visibility = visibility
+                                    joystickContainer.visibility = visibility
+                                    
                                     // Update progress bar position based on orientation
                                     updateProgressBarPosition()
                                 },
@@ -342,6 +381,59 @@ class PlayerActivity : BasePlayerActivity() {
 
         pipButton.setOnClickListener {
             pictureInPicture()
+        }
+        
+        // Zoom controls
+        zoomInButton.setOnClickListener {
+            playerGestureHelper?.zoomIn()
+        }
+        
+        zoomOutButton.setOnClickListener {
+            playerGestureHelper?.zoomOut()
+        }
+        
+        resetButton.setOnClickListener {
+            playerGestureHelper?.resetVideo()
+        }
+        
+        // Joystick control
+        var joystickActive = false
+        var joystickCenterX = 0f
+        var joystickCenterY = 0f
+        
+        // Make joystick container clickable to handle performClick
+        joystickContainer.isClickable = true
+        
+        joystickContainer.setOnTouchListener { _, event ->
+            when (event.actionMasked) {
+                0, 5 -> { // ACTION_DOWN = 0, ACTION_POINTER_DOWN = 5
+                    joystickActive = true
+                    joystickCenterX = joystickContainer.width / 2f
+                    joystickCenterY = joystickContainer.height / 2f
+                    updateJoystickPosition(event.x, event.y, joystickHandle, joystickContainer)
+                }
+                2 -> { // ACTION_MOVE = 2
+                    if (joystickActive) {
+                        updateJoystickPosition(event.x, event.y, joystickHandle, joystickContainer)
+                        val deltaX = (event.x - joystickCenterX) / joystickCenterX
+                        val deltaY = (event.y - joystickCenterY) / joystickCenterY
+                        playerGestureHelper?.panVideo(deltaX, deltaY)
+                    }
+                }
+                1, 3 -> { // ACTION_UP = 1, ACTION_CANCEL = 3
+                    joystickActive = false
+                    // Reset joystick handle to center
+                    joystickHandle.animate()
+                        .x(joystickCenterX - joystickHandle.width / 2f)
+                        .y(joystickCenterY - joystickHandle.height / 2f)
+                        .setDuration(100)
+                        .start()
+                }
+                else -> {
+                    // Handle other actions if needed
+                }
+            }
+            true
         }
 
         // Set marker color
@@ -515,5 +607,36 @@ class PlayerActivity : BasePlayerActivity() {
     private fun updateProgressBarPosition() {
         // No longer needed as controls are now at the bottom
         // Keeping the method for compatibility
+    }
+    
+    /**
+     * Update joystick handle position
+     */
+    private fun updateJoystickPosition(x: Float, y: Float, handle: View, container: View) {
+        val centerX = container.width / 2f
+        val centerY = container.height / 2f
+        val radius = container.width / 2f - handle.width / 2f
+        
+        // Calculate distance from center
+        val dx = x - centerX
+        val dy = y - centerY
+        val distance = kotlin.math.sqrt(dx * dx + dy * dy)
+        
+        // Limit to circle boundary
+        val limitedX: Float
+        val limitedY: Float
+        
+        if (distance <= radius) {
+            limitedX = x
+            limitedY = y
+        } else {
+            val angle = kotlin.math.atan2(dy, dx)
+            limitedX = centerX + radius * kotlin.math.cos(angle)
+            limitedY = centerY + radius * kotlin.math.sin(angle)
+        }
+        
+        // Update handle position
+        handle.x = limitedX - handle.width / 2f
+        handle.y = limitedY - handle.height / 2f
     }
 }

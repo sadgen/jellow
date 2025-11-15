@@ -510,13 +510,13 @@ class PlayerGestureHelper(
                     val deltaY = detector.focusY - lastTouchY
                     
                     // Update pan position with corrected direction
-                    // Invert X direction to make it more intuitive (move right to pan right)
+                    // Fix X direction: use correct intuitive direction (move right to pan right)
                     videoPanX += deltaX / playerView.width
                     videoPanY += deltaY / playerView.height
                     
-                    // Limit pan position based on zoom level
-                    val maxPanX = (currentZoomLevel - 1.0f) * 0.5f
-                    val maxPanY = (currentZoomLevel - 1.0f) * 0.5f
+                    // Limit pan position based on zoom level with proper boundary calculation
+                    val maxPanX = calculateMaxPanX(currentZoomLevel)
+                    val maxPanY = calculateMaxPanY(currentZoomLevel)
                     
                     videoPanX = videoPanX.coerceIn(-maxPanX, maxPanX)
                     videoPanY = videoPanY.coerceIn(-maxPanY, maxPanY)
@@ -564,6 +564,126 @@ class PlayerGestureHelper(
             (playerView.player as MPVPlayer).updateVideoPan(panX, panY)
         }
         // For non-MPV players, panning is not supported
+    }
+    
+    /**
+     * Zoom in the video by a fixed amount
+     */
+    fun zoomIn() {
+        currentZoomLevel *= 1.2f
+        currentZoomLevel = currentZoomLevel.coerceIn(0.5f, 5.0f)
+        updateZoomLevel(currentZoomLevel)
+    }
+    
+    /**
+     * Zoom out the video by a fixed amount
+     */
+    fun zoomOut() {
+        currentZoomLevel /= 1.2f
+        currentZoomLevel = currentZoomLevel.coerceIn(0.5f, 5.0f)
+        updateZoomLevel(currentZoomLevel)
+    }
+    
+    /**
+     * Pan the video by the specified delta values
+     */
+    fun panVideo(deltaX: Float, deltaY: Float) {
+        if (currentZoomLevel <= 1.0f) return
+        
+        // Update pan position with joystick input
+        // Fix X direction: use correct intuitive direction
+        videoPanX += deltaX * 0.05f  // Scale down for smoother movement
+        videoPanY += deltaY * 0.05f
+        
+        // Calculate maximum pan based on zoom level and aspect ratio
+        // This ensures video stays within screen boundaries
+        val maxPanX = calculateMaxPanX(currentZoomLevel)
+        val maxPanY = calculateMaxPanY(currentZoomLevel)
+        
+        videoPanX = videoPanX.coerceIn(-maxPanX, maxPanX)
+        videoPanY = videoPanY.coerceIn(-maxPanY, maxPanY)
+        
+        updateVideoPan(videoPanX, videoPanY)
+    }
+    
+    /**
+     * Calculate maximum pan in X direction based on zoom level and aspect ratio
+     */
+    private fun calculateMaxPanX(zoomLevel: Float): Float {
+        // For X direction, limit based on video width relative to screen width
+        // When zoomed, video can only pan until its edges reach screen edges
+        // Use more precise calculation to prevent video from leaving screen
+        return (zoomLevel - 1.0f) * 0.5f / zoomLevel
+    }
+    
+    /**
+     * Calculate maximum pan in Y direction based on zoom level and aspect ratio
+     */
+    private fun calculateMaxPanY(zoomLevel: Float): Float {
+        // For Y direction, limit based on video height relative to screen height
+        // When zoomed, video can only pan until its edges reach screen edges
+        // Use more precise calculation to prevent video from leaving screen
+        return (zoomLevel - 1.0f) * 0.5f / zoomLevel
+    }
+    
+    /**
+     * Reset video to original size and position
+     */
+    fun resetVideo() {
+        currentZoomLevel = 1.0f
+        videoPanX = 0f
+        videoPanY = 0f
+        updateZoomLevel(currentZoomLevel)
+        updateVideoPan(videoPanX, videoPanY)
+    }
+    
+    /**
+     * Handle two-finger pan gesture for moving video when zoomed
+     */
+    private fun handleTwoFingerPan(event: MotionEvent) {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_POINTER_DOWN, MotionEvent.ACTION_DOWN -> {
+                // Store initial touch positions for two fingers
+                if (event.pointerCount >= 2) {
+                    lastTouchX = (event.getX(0) + event.getX(1)) / 2f
+                    lastTouchY = (event.getY(0) + event.getY(1)) / 2f
+                }
+            }
+            MotionEvent.ACTION_MOVE -> {
+                if (event.pointerCount >= 2) {
+                    // Calculate center point between two fingers
+                    val currentCenterX = (event.getX(0) + event.getX(1)) / 2f
+                    val currentCenterY = (event.getY(0) + event.getY(1)) / 2f
+                    
+                    // Calculate delta movement
+                    val deltaX = currentCenterX - lastTouchX
+                    val deltaY = currentCenterY - lastTouchY
+                    
+                    // Update pan position with corrected direction
+                    // Fix X direction: use correct intuitive direction (move right to pan right)
+                    videoPanX += deltaX / playerView.width
+                    videoPanY += deltaY / playerView.height
+                    
+                    // Limit pan position based on zoom level with proper boundary calculation
+                    val maxPanX = calculateMaxPanX(currentZoomLevel)
+                    val maxPanY = calculateMaxPanY(currentZoomLevel)
+                    
+                    videoPanX = videoPanX.coerceIn(-maxPanX, maxPanX)
+                    videoPanY = videoPanY.coerceIn(-maxPanY, maxPanY)
+                    
+                    updateVideoPan(videoPanX, videoPanY)
+                    
+                    // Update last touch position
+                    lastTouchX = currentCenterX
+                    lastTouchY = currentCenterY
+                }
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_CANCEL -> {
+                // Reset last touch positions
+                lastTouchX = 0f
+                lastTouchY = 0f
+            }
+        }
     }
 
     private fun releaseAction(event: MotionEvent) {
@@ -736,9 +856,14 @@ class PlayerGestureHelper(
                         if (appPreferences.getValue(appPreferences.playerGesturesSeek)) seekGestureDetector.onTouchEvent(event)
                     }
                     2 -> {
-                        // Handle zoom gesture (pan is handled within the zoom gesture detector)
+                        // Handle zoom gesture
                         if (appPreferences.getValue(appPreferences.playerGesturesZoom)) {
                             zoomGestureDetector.onTouchEvent(event)
+                        }
+                        
+                        // Handle two-finger pan gesture (independent of zoom)
+                        if (currentZoomLevel > 1.0f) {
+                            handleTwoFingerPan(event)
                         }
                     }
                 }

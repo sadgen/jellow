@@ -20,4 +20,7 @@
     <string name="select_audio_track">Select audio track</string>
     <string name="select_subtile_track">Select subtitle track</string>
     <string name="player_controls_screen_rotation">Toggle screen orientation</string>
+    <string name="zoom_in">Zoom in</string>
+    <string name="zoom_out">Zoom out</string>
+    <string name="reset_video">Reset video</string>
 </resources>

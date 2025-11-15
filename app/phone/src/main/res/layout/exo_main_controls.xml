@@ -226,6 +226,58 @@
             app:layout_constraintStart_toStartOf="@id/guideline"
             app:layout_constraintTop_toBottomOf="@id/time_info_container"
             app:played_color="?attr/colorPrimary" />
+        
+        <!-- 缩放控制按钮 -->
+        <LinearLayout
+            android:id="@+id/zoom_controls"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:background="@drawable/overlay_background"
+            android:orientation="horizontal"
+            android:padding="8dp"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/exo_progress">
+            
+            <ImageButton
+                android:id="@+id/btn_zoom_out"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/transparent_circle_background"
+                android:contentDescription="@string/zoom_out"
+                android:padding="8dp"
+                android:src="@drawable/ic_minus"
+                app:tint="@android:color/white" />
+            
+            <Space
+                android:layout_width="8dp"
+                android:layout_height="0dp" />
+            
+            <ImageButton
+                android:id="@+id/btn_reset"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/transparent_circle_background"
+                android:contentDescription="@string/reset_video"
+                android:padding="8dp"
+                android:src="@drawable/ic_reset"
+                app:tint="@android:color/white" />
+            
+            <Space
+                android:layout_width="8dp"
+                android:layout_height="0dp" />
+            
+            <ImageButton
+                android:id="@+id/btn_zoom_in"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/transparent_circle_background"
+                android:contentDescription="@string/zoom_in"
+                android:padding="8dp"
+                android:src="@drawable/ic_plus"
+                app:tint="@android:color/white" />
+        </LinearLayout>
 
         <!-- 指导线，用于定位3/4宽度 -->
         <androidx.constraintlayout.widget.Guideline
@@ -234,6 +286,36 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             app:layout_constraintGuide_percent="0.25" />
+        
+        <!-- 摇杆控制 -->
+        <FrameLayout
+            android:id="@+id/joystick_container"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/overlay_background"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/zoom_controls">
+            
+            <!-- 摇杆背景 -->
+            <View
+                android:id="@+id/joystick_background"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:layout_gravity="center"
+                android:background="@drawable/circle_background"
+                android:alpha="0.3" />
+            
+            <!-- 摇杆控制点 -->
+            <View
+                android:id="@+id/joystick_handle"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="center"
+                android:background="@drawable/circle_background" />
+        </FrameLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
