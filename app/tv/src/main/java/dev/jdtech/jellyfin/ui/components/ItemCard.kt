@@ -2,18 +2,22 @@ package dev.jdtech.jellyfin.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -37,6 +41,7 @@ fun ItemCard(
     item: FindroidItem,
     direction: Direction,
     onClick: (FindroidItem) -> Unit,
+    onPlayClick: (FindroidItem) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val width =
@@ -81,6 +86,26 @@ fun ItemCard(
                                     .background(MaterialTheme.colorScheme.primary)
                         )
                     }
+                }
+
+                // 添加全透明圆形播放按钮
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(MaterialTheme.spacings.small)
+                        .size(51.3.dp)
+                        .clip(MaterialTheme.shapes.extraSmall)
+                        .background(Color.Transparent)
+                        .clickable { onPlayClick(item) }
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_play),
+                        contentDescription = "Play",
+                        tint = Color(0xFF90EE90).copy(alpha = 0.7f),
+                        modifier = Modifier
+                            .size(40.dp)
+                            .align(Alignment.Center)
+                    )
                 }
             }
         }

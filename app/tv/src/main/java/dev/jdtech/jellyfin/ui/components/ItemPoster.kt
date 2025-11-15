@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.MaterialTheme
@@ -69,25 +70,32 @@ fun ItemPoster(item: FindroidItem, direction: Direction, modifier: Modifier = Mo
             Row(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(8.dp)
-                    .clip(MaterialTheme.shapes.small)
-                    .background(Color.Black.copy(alpha = 0.7f))
-                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                    .padding(MaterialTheme.spacings.small)
+                    .size(51.3.dp)
+                    .clip(MaterialTheme.shapes.extraSmall)
+                    .background(Color.White.copy(alpha = 0.3f))
+                    .padding(1.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Icon(
-                    painter = painterResource(CoreR.drawable.ic_play),
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(12.dp)
-                )
-                Text(
-                    text = item.playCount.toString(),
-                    color = Color.White,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
-                )
+                Box(
+                    modifier = Modifier
+                        .size(49.3.dp)
+                        .clip(MaterialTheme.shapes.extraSmall)
+                        .background(
+                            if (item.playCount == 0) Color(0xFF90EE90).copy(alpha = 0.4f) 
+                            else Color(0xFF333333).copy(alpha = 0.4f)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (item.playCount == 0) "—" else item.playCount.toString(),
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 18.4.sp,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
         }
     }
