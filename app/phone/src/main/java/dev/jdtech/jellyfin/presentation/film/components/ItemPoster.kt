@@ -76,34 +76,31 @@ fun ItemPoster(item: FindroidItem, direction: Direction, modifier: Modifier = Mo
         )
 
         // 播放次数显示 - 左下角
-        if (item.playCount > 0) {
-            Row(
+        if (item.playCount >= 0) {
+            Box(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(MaterialTheme.spacings.small)
-                    .size(25.65.dp)
+                    .padding(8.dp)
+                    .size(24.dp)
                     .clip(MaterialTheme.shapes.extraSmall)
-                    .background(Color.White.copy(alpha = 0.3f))
-                    .padding(1.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    .background(Color.White.copy(alpha = 0.9f))
+                    .padding(1.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .size(23.65.dp)
+                        .fillMaxSize()
                         .clip(MaterialTheme.shapes.extraSmall)
                         .background(
-                            if (item.playCount == 0) Color(0xFF90EE90).copy(alpha = 0.4f) 
-                            else Color(0xFF333333).copy(alpha = 0.4f)
-                        ),
-                    contentAlignment = Alignment.Center
+                            if (item.playCount == 0) Color(0xFFFFA500).copy(alpha = 0.7f) 
+                            else Color(0xFF333333).copy(alpha = 0.7f)
+                        )
                 ) {
                     Text(
                         text = if (item.playCount == 0) "—" else item.playCount.toString(),
-                        color = Color.White.copy(alpha = 0.8f),
-                        fontSize = 13.6.sp,
+                        color = Color.White,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Medium,
-                        textAlign = TextAlign.Center,
+                        modifier = Modifier.align(Alignment.Center)
                     )
                 }
             }
