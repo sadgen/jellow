@@ -72,27 +72,29 @@ fun ItemPoster(
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(8.dp)
-                    .size(24.dp)
+                    .padding(MaterialTheme.spacings.small)
+                    .size(51.3.dp)
                     .clip(MaterialTheme.shapes.extraSmall)
-                    .background(Color.White.copy(alpha = 0.9f))
+                    .background(Color.White.copy(alpha = 0.3f))
                     .padding(1.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .size(49.3.dp)
                         .clip(MaterialTheme.shapes.extraSmall)
                         .background(
-                            if (item.playCount == 0) Color(0xFFFFA500).copy(alpha = 0.7f) 
-                            else Color(0xFF333333).copy(alpha = 0.7f)
-                        )
+                            if (item.playCount == 0) Color(0xFF90EE90).copy(alpha = 0.4f) 
+                            else Color(0xFF333333).copy(alpha = 0.4f)
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = if (item.playCount == 0) "—" else item.playCount.toString(),
-                        color = Color.White,
-                        fontSize = 10.sp,
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 18.4.sp,
                         fontWeight = FontWeight.Medium,
-                        modifier = Modifier.align(Alignment.Center)
+                        textAlign = TextAlign.Center,
+                        lineHeight = 49.3.sp
                     )
                 }
             }

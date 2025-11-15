@@ -2,6 +2,8 @@ package dev.jdtech.jellyfin.presentation.film.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -115,19 +117,23 @@ fun ItemCard(
                     }
                 }
                 
-                // 添加透明播放按钮
-                IconButton(
-                    onClick = { onPlayClick(item) },
+                // 添加全透明圆形播放按钮
+                Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(MaterialTheme.spacings.small)
-                        .size(36.dp)
+                        .size(25.65.dp)
+                        .clip(MaterialTheme.shapes.extraSmall)
+                        .background(Color.Transparent)
+                        .clickable { onPlayClick(item) }
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_play),
                         contentDescription = "Play",
-                        tint = Color.White.copy(alpha = 0.8f),
-                        modifier = Modifier.size(18.dp)
+                        tint = Color(0xFF90EE90).copy(alpha = 0.7f),
+                        modifier = Modifier
+                            .size(20.dp)
+                            .align(Alignment.Center)
                     )
                 }
             }

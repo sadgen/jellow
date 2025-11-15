@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import dev.jdtech.jellyfin.presentation.theme.spacings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -20,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -70,27 +72,29 @@ fun ItemPoster(
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(8.dp)
-                    .size(24.dp)
+                    .padding(MaterialTheme.spacings.small)
+                    .size(25.65.dp)
                     .clip(MaterialTheme.shapes.extraSmall)
-                    .background(Color.White.copy(alpha = 0.9f))
+                    .background(Color.White.copy(alpha = 0.3f))
                     .padding(1.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .size(23.65.dp)
                         .clip(MaterialTheme.shapes.extraSmall)
                         .background(
-                            if (item.playCount == 0) Color(0xFFFFA500).copy(alpha = 0.7f) 
-                            else Color(0xFF333333).copy(alpha = 0.7f)
-                        )
+                            if (item.playCount == 0) Color(0xFF90EE90).copy(alpha = 0.4f) 
+                            else Color(0xFF333333).copy(alpha = 0.4f)
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = if (item.playCount == 0) "—" else item.playCount.toString(),
-                        color = Color.White,
-                        fontSize = 10.sp,
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 13.6.sp,
                         fontWeight = FontWeight.Medium,
-                        modifier = Modifier.align(Alignment.Center)
+                        textAlign = TextAlign.Center,
+                        lineHeight = 23.65.sp
                     )
                 }
             }
