@@ -116,7 +116,7 @@ interface ServerDatabaseDao {
     fun getSourceByDownloadId(downloadId: Long): FindroidSourceDto?
 
     @Query("UPDATE sources SET downloadId = :downloadId WHERE id = :id")
-    fun setSourceDownloadId(id: String, downloadId: Long)
+    fun setSourceDownloadId(id: String, downloadId: Long?)
 
     @Query("UPDATE sources SET path = :path WHERE id = :id")
     fun setSourcePath(id: String, path: String)

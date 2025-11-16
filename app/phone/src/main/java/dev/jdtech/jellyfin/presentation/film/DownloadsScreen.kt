@@ -115,28 +115,14 @@ fun DownloadsScreen(
                         .padding(innerPadding)
                 ) {
                     items(uiState.downloadItems) { downloadItem ->
-                        DownloadItemCard(
+                        // 使用安全的下载项渲染函数
+                        SafeDownloadItemCard(
                             downloadItem = downloadItem,
                             context = context,
+                            onPauseClick = { viewModel.pauseDownload(downloadItem) },
+                            onResumeClick = { viewModel.resumeDownload(downloadItem) },
                             onRetryClick = { viewModel.retryDownload(downloadItem) },
-                            onCancelClick = { viewModel.cancelDownload(downloadItem) },
-                            onPlayClick = { 
-                                // 播放已下载的文件
-                                val intent = Intent(context, PlayerActivity::class.java)
-                                intent.putExtra("itemId", downloadItem.item.id.toString())
-                                intent.putExtra("itemKind", when (downloadItem.item) {
-                                    is dev.jdtech.jellyfin.models.FindroidMovie -> BaseItemKind.MOVIE.serialName
-                                    is dev.jdtech.jellyfin.models.FindroidEpisode -> BaseItemKind.EPISODE.serialName
-                                    is dev.jdtech.jellyfin.models.FindroidShow -> BaseItemKind.SERIES.serialName
-                                    else -> BaseItemKind.MOVIE.serialName
-                                })
-                                intent.putExtra("startFromBeginning", false)
-                                context.startActivity(intent)
-                            },
-                            onOpenFileClick = {
-                                // 打开文件位置
-                                openFileLocation(context, downloadItem.source.path)
-                            }
+                            onCancelClick = { viewModel.cancelDownload(downloadItem) }
                         )
                     }
                 }
@@ -154,6 +140,8 @@ fun DownloadsScreen(
 fun DownloadItemCard(
     downloadItem: DownloadItem,
     context: Context,
+    onPauseClick: () -> Unit,
+    onResumeClick: () -> Unit,
     onRetryClick: () -> Unit,
     onCancelClick: () -> Unit,
     onPlayClick: () -> Unit,
@@ -202,9 +190,9 @@ fun DownloadItemCard(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            // 显示两位小数的进度百分比和下载速度
+                            // 显示进度百分比和文件大小信息
                             Text(
-                                text = "${"%.2f".format(downloadItem.progress)}% - 下载速度: 1.2 MB/s",
+                                text = "${downloadItem.progress}% (${formatFileSize(downloadItem.downloadedBytes)}/${formatFileSize(downloadItem.totalBytes)})",
                                 fontWeight = FontWeight.Medium
                             )
                             
@@ -236,7 +224,7 @@ fun DownloadItemCard(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "${"%.2f".format(downloadItem.progress)}%",
+                                text = "${downloadItem.progress}% (${formatFileSize(downloadItem.downloadedBytes)}/${formatFileSize(downloadItem.totalBytes)})",
                                 fontWeight = FontWeight.Medium
                             )
                             
@@ -266,7 +254,7 @@ fun DownloadItemCard(
                     DownloadStatus.DOWNLOADING -> {
                         IconButton(onClick = { 
                             // 暂停下载
-                            onCancelClick() 
+                            onPauseClick() 
                         }) {
                             Icon(
                                 painter = painterResource(CoreR.drawable.ic_pause),
@@ -275,7 +263,7 @@ fun DownloadItemCard(
                         }
                     }
                     DownloadStatus.PAUSED -> {
-                        IconButton(onClick = onRetryClick) {
+                        IconButton(onClick = onResumeClick) {
                             Icon(
                                 painter = painterResource(CoreR.drawable.ic_play),
                                 contentDescription = "继续"
@@ -325,6 +313,112 @@ private fun ErrorMessage(error: String) {
     Text(
         text = "错误: $error",
         modifier = Modifier.padding(16.dp)
+    )
+}
+
+@Composable
+fun SafeDownloadItemCard(
+    downloadItem: DownloadItem,
+    context: Context,
+    onPauseClick: () -> Unit,
+    onResumeClick: () -> Unit,
+    onRetryClick: () -> Unit,
+    onCancelClick: () -> Unit
+) {
+    // 安全地渲染下载项
+    DownloadItemCard(
+        downloadItem = downloadItem,
+        context = context,
+        onPauseClick = onPauseClick,
+        onResumeClick = onResumeClick,
+        onRetryClick = onRetryClick,
+        onCancelClick = onCancelClick,
+        onPlayClick = { 
+            // 播放已下载的文件
+            try {
+                val intent = Intent(context, PlayerActivity::class.java)
+                intent.putExtra("itemId", downloadItem.item.id.toString())
+                intent.putExtra("itemKind", when (downloadItem.item) {
+                    is dev.jdtech.jellyfin.models.FindroidMovie -> BaseItemKind.MOVIE.serialName
+                    is dev.jdtech.jellyfin.models.FindroidEpisode -> BaseItemKind.EPISODE.serialName
+                    is dev.jdtech.jellyfin.models.FindroidShow -> BaseItemKind.SERIES.serialName
+                    else -> BaseItemKind.MOVIE.serialName
+                })
+                intent.putExtra("startFromBeginning", false)
+                context.startActivity(intent)
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(
+                    context,
+                    "播放失败: ${e.message}",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            }
+        },
+        onOpenFileClick = {
+            // 打开文件位置
+            try {
+                openFileLocation(context, downloadItem.source.path)
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(
+                    context,
+                    "无法打开文件位置",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    )
+}
+
+@Composable
+fun ErrorDownloadItemCard(
+    errorMessage: String,
+    onRetryClick: () -> Unit,
+    onCancelClick: () -> Unit
+) {
+    ListItem(
+        headlineContent = {
+            Text(
+                text = "下载项加载失败",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        supportingContent = {
+            Text(
+                text = errorMessage,
+                color = Color.Red
+            )
+        },
+        trailingContent = {
+            Row {
+                IconButton(onClick = onRetryClick) {
+                    Icon(
+                        painter = painterResource(CoreR.drawable.ic_play),
+                        contentDescription = "重试"
+                    )
+                }
+                IconButton(onClick = onCancelClick) {
+                    Icon(
+                        painter = painterResource(CoreR.drawable.ic_cancel),
+                        contentDescription = "取消"
+                    )
+                }
+            }
+        }
+    )
+}
+
+/**
+ * 格式化文件大小
+ */
+private fun formatFileSize(bytes: Long): String {
+    if (bytes <= 0) return "0 B"
+    
+    val units = arrayOf("B", "KB", "MB", "GB", "TB")
+    val digitGroups = (Math.log10(bytes.toDouble()) / Math.log10(1024.0)).toInt()
+    
+    return "%.1f %s".format(
+        bytes / Math.pow(1024.0, digitGroups.toDouble()),
+        units[digitGroups]
     )
 }
 

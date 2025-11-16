@@ -5,13 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
-import dev.jdtech.jellyfin.models.FindroidEpisodeDto
 import dev.jdtech.jellyfin.models.FindroidItem
-import dev.jdtech.jellyfin.models.FindroidMovieDto
 import dev.jdtech.jellyfin.models.FindroidSource
 import dev.jdtech.jellyfin.models.FindroidSourceDto
-import dev.jdtech.jellyfin.models.toFindroidEpisode
-import dev.jdtech.jellyfin.models.toFindroidMovie
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.utils.Downloader
 import kotlinx.coroutines.delay
@@ -26,7 +22,9 @@ data class DownloadItem(
     val source: FindroidSource,
     val downloadId: Long,
     val progress: Int,
-    val status: DownloadStatus
+    val status: DownloadStatus,
+    val downloadedBytes: Long,
+    val totalBytes: Long
 )
 
 enum class DownloadStatus {
@@ -60,9 +58,14 @@ constructor(
     
     private fun startMonitoringDownloads() {
         viewModelScope.launch {
-            while (true) {
-                updateDownloadProgress()
-                delay(1000) // 每秒更新一次进度
+            try {
+                while (true) {
+                    updateDownloadProgress()
+                    delay(1000) // 每秒更新一次进度
+                }
+            } catch (e: Exception) {
+                // 重新启动监控循环
+                startMonitoringDownloads()
             }
         }
     }
@@ -74,64 +77,67 @@ constructor(
             // 获取所有有下载ID的源
             val sourcesWithDownloadId = getSourcesWithDownloadId()
             
-            // 调试日志：显示找到的源数量
-            println("DEBUG: Found ${sourcesWithDownloadId.size} sources with download IDs")
-            
             // 检查每个下载项的进度
             for (sourceDto in sourcesWithDownloadId) {
                 try {
+                    // 安全检查：确保下载ID不为null
+                    val downloadId = sourceDto.downloadId
+                    if (downloadId == null) {
+                        continue
+                    }
+                    
                     // 获取对应的项目信息
-                    println("DEBUG: Processing source ${sourceDto.id}, itemId: ${sourceDto.itemId}")
                     val item = getItemForSource(sourceDto)
                     
                     if (item != null) {
-                        println("DEBUG: Found item: ${item.name}, type: ${item::class.simpleName}")
+                        // 安全地获取下载详细信息，处理可能的异常
+                        val (status, progress, bytesInfo) = try {
+                            downloader.getDownloadDetails(downloadId)
+                        } catch (e: Exception) {
+                            // 如果获取进度失败，默认为失败状态
+                            Triple(DownloadManager.STATUS_FAILED, 0, Pair(0L, 0L))
+                        }
                         
-                        val (status, progress) = downloader.getProgress(sourceDto.downloadId)
-                        println("DEBUG: Download status: $status, progress: $progress")
+                        val (downloadedBytes, totalBytes) = bytesInfo
                         
                         val downloadStatus = when (status) {
                             DownloadManager.STATUS_RUNNING -> DownloadStatus.DOWNLOADING
                             DownloadManager.STATUS_SUCCESSFUL -> DownloadStatus.COMPLETED
                             DownloadManager.STATUS_FAILED -> DownloadStatus.FAILED
                             DownloadManager.STATUS_PAUSED -> DownloadStatus.PAUSED
-                            else -> {
-                                println("DEBUG: Unknown download status: $status, defaulting to DOWNLOADING")
-                                DownloadStatus.DOWNLOADING
-                            }
+                            else -> DownloadStatus.DOWNLOADING
                         }
                         
-                        // 调试日志：显示每个下载项的状态
-                        println("DEBUG: Item ${item.name} - Status: $downloadStatus, Progress: $progress%")
-                        
-                        // 创建 FindroidSource 对象
+                        // 创建 FindroidSource 对象，确保路径不为null
+                        val sourcePath = sourceDto.path ?: ""
                         val source = FindroidSource(
                             id = sourceDto.id,
-                            name = sourceDto.name,
+                            name = sourceDto.name ?: "",
                             type = sourceDto.type,
-                            path = sourceDto.path,
-                            size = try { java.io.File(sourceDto.path).length() } catch (e: Exception) { 0L },
+                            path = sourcePath,
+                            size = try { 
+                                if (sourcePath.isNotEmpty()) {
+                                    java.io.File(sourcePath).length() 
+                                } else {
+                                    0L 
+                                }
+                            } catch (e: Exception) { 0L },
                             mediaStreams = emptyList(),
-                            downloadId = sourceDto.downloadId
+                            downloadId = downloadId
                         )
                         
                         // 显示所有下载项，包括正在下载和已完成的
-                        activeDownloads.add(DownloadItem(item, source, sourceDto.downloadId!!, progress, downloadStatus))
-                        println("DEBUG: Successfully added download item to list")
-                    } else {
-                        println("DEBUG: Could not find item for source ${sourceDto.id}")
+                        activeDownloads.add(DownloadItem(item, source, downloadId, progress, downloadStatus, downloadedBytes, totalBytes))
                     }
                 } catch (e: Exception) {
                     // 跳过有问题的下载项
-                    println("DEBUG: Error processing source ${sourceDto.id}: ${e.message}")
-                    e.printStackTrace()
                     continue
                 }
             }
             
             _uiState.emit(_uiState.value.copy(downloadItems = activeDownloads))
         } catch (e: Exception) {
-            _uiState.emit(_uiState.value.copy(error = e.message))
+            _uiState.emit(_uiState.value.copy(error = "更新下载进度时出错: ${e.message}"))
         }
     }
     
@@ -160,15 +166,8 @@ constructor(
             // 过滤出有下载ID的源
             val sourcesWithDownloadId = allSources.filter { it.downloadId != null }
             
-            // 调试日志：显示查询结果
-            println("DEBUG: Total sources: ${allSources.size}, Sources with download ID: ${sourcesWithDownloadId.size}")
-            for (source in sourcesWithDownloadId) {
-                println("DEBUG: Source ${source.id} - Download ID: ${source.downloadId}, Path: ${source.path}")
-            }
-            
             sourcesWithDownloadId
         } catch (e: Exception) {
-            println("DEBUG: Error in getSourcesWithDownloadId: ${e.message}")
             emptyList()
         }
     }
@@ -180,29 +179,11 @@ constructor(
         return try {
             // 根据源的项目ID获取对应的项目
             val itemId = sourceDto.itemId
-            println("DEBUG: Looking for item with ID: $itemId")
             
-            // 调试：检查数据库中是否有任何电影或剧集
-            val allMovies = database.getMovies()
-            val allEpisodes = database.getEpisodes()
-            println("DEBUG: Total movies in database: ${allMovies.size}")
-            println("DEBUG: Total episodes in database: ${allEpisodes.size}")
-            
-            // 检查是否有匹配的电影ID
-            val matchingMovies = allMovies.filter { it.id == itemId }
-            println("DEBUG: Matching movies found: ${matchingMovies.size}")
-            
-            // 检查是否有匹配的剧集ID
-            val matchingEpisodes = allEpisodes.filter { it.id == itemId }
-            println("DEBUG: Matching episodes found: ${matchingEpisodes.size}")
-            
-            // 先尝试获取剧集（因为调试显示有匹配的剧集）
+            // 先尝试获取剧集
             try {
-                val episode = database.getEpisode(itemId)
-                if (episode != null) {
-                    println("DEBUG: Found episode: ${episode.name}")
-                    return episode.toFindroidEpisode(database, repository.getUserId())
-                }
+                // 直接使用repository获取剧集
+                return repository.getEpisode(itemId)
             } catch (e: Exception) {
                 println("DEBUG: Error getting episode: ${e.message}")
                 // 继续尝试获取电影
@@ -210,26 +191,64 @@ constructor(
             
             // 然后尝试获取电影
             try {
-                val movie = database.getMovie(itemId)
-                if (movie != null) {
-                    println("DEBUG: Found movie: ${movie.name}")
-                    return movie.toFindroidMovie(database, repository.getUserId())
-                }
+                // 直接使用repository获取电影
+                return repository.getMovie(itemId)
             } catch (e: Exception) {
-                println("DEBUG: Error getting movie: ${e.message}")
             }
             
-            println("DEBUG: Could not find movie or episode for itemId: $itemId")
-            println("DEBUG: Available movie IDs: ${allMovies.map { it.id }}")
-            println("DEBUG: Available episode IDs: ${allEpisodes.map { it.id }}")
             null
         } catch (e: Exception) {
-            println("DEBUG: Error in getItemForSource: ${e.message}")
-            e.printStackTrace()
             null
         }
     }
     
+    fun pauseDownload(downloadItem: DownloadItem) {
+        viewModelScope.launch {
+            try {
+                // 暂停下载
+                downloader.pauseDownload(downloadItem.item, downloadItem.source)
+                
+                // 更新UI状态为已暂停
+                val currentState = _uiState.value
+                val updatedItems = currentState.downloadItems.map { item ->
+                    if (item.source.id == downloadItem.source.id) {
+                        item.copy(status = DownloadStatus.PAUSED)
+                    } else {
+                        item
+                    }
+                }
+                _uiState.emit(currentState.copy(downloadItems = updatedItems))
+            } catch (e: Exception) {
+                _uiState.emit(_uiState.value.copy(error = e.message))
+            }
+        }
+    }
+
+    fun resumeDownload(downloadItem: DownloadItem) {
+        viewModelScope.launch {
+            try {
+                // 继续下载
+                val (downloadId, error) = downloader.resumeDownload(downloadItem.item, downloadItem.source)
+                if (error != null) {
+                    _uiState.emit(_uiState.value.copy(error = error.toString()))
+                } else {
+                    // 更新UI状态为下载中
+                    val currentState = _uiState.value
+                    val updatedItems = currentState.downloadItems.map { item ->
+                        if (item.source.id == downloadItem.source.id) {
+                            item.copy(status = DownloadStatus.DOWNLOADING)
+                        } else {
+                            item
+                        }
+                    }
+                    _uiState.emit(currentState.copy(downloadItems = updatedItems))
+                }
+            } catch (e: Exception) {
+                _uiState.emit(_uiState.value.copy(error = e.message))
+            }
+        }
+    }
+
     fun retryDownload(downloadItem: DownloadItem) {
         viewModelScope.launch {
             try {
