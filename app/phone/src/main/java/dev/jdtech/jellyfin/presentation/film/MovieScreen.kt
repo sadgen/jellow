@@ -61,6 +61,7 @@ fun MovieScreen(
     movieId: UUID,
     navigateBack: () -> Unit,
     navigateToPerson: (personId: UUID) -> Unit,
+    navigateToDownloads: () -> Unit,
     viewModel: MovieViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -74,6 +75,7 @@ fun MovieScreen(
 
     MovieScreenLayout(
         state = state,
+        navigateToDownloads = navigateToDownloads,
         onAction = { action ->
             when (action) {
                 is MovieAction.Play -> {
@@ -102,6 +104,7 @@ fun MovieScreen(
 @Composable
 private fun MovieScreenLayout(
     state: MovieState,
+    navigateToDownloads: () -> Unit,
     onAction: (MovieAction) -> Unit,
 ) {
     val safePadding = rememberSafePadding()
@@ -222,7 +225,7 @@ private fun MovieScreenLayout(
                         onTrailerClick = { uri ->
                             onAction(MovieAction.PlayTrailer(uri))
                         },
-                        onDownloadClick = {},
+                        onDownloadClick = { onAction(MovieAction.Download { navigateToDownloads() }) },
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
@@ -295,6 +298,7 @@ private fun EpisodeScreenLayoutPreview() {
                 movie = dummyMovie,
                 videoMetadata = dummyVideoMetadata,
             ),
+            navigateToDownloads = {},
             onAction = {},
         )
     }

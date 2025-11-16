@@ -11,4 +11,7 @@ data class MovieState(
     val director: FindroidItemPerson? = null,
     val writers: List<FindroidItemPerson> = emptyList(),
     val error: Exception? = null,
+    val downloadInProgress: Boolean = false,
+    val downloadId: Long? = null,
+    val downloadProgress: Int = 0,
 )

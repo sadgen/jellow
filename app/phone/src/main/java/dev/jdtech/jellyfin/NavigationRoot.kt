@@ -49,6 +49,7 @@ import dev.jdtech.jellyfin.presentation.film.MovieScreen
 import dev.jdtech.jellyfin.presentation.film.PersonScreen
 import dev.jdtech.jellyfin.presentation.film.SeasonScreen
 import dev.jdtech.jellyfin.presentation.film.ShowScreen
+import dev.jdtech.jellyfin.presentation.film.DownloadsScreen
 import dev.jdtech.jellyfin.presentation.settings.AboutScreen
 import dev.jdtech.jellyfin.presentation.settings.SettingsScreen
 import dev.jdtech.jellyfin.presentation.setup.addresses.ServerAddressesScreen
@@ -107,6 +108,9 @@ data class CollectionRoute(
 data object FavoritesRoute
 
 @Serializable
+data object DownloadsRoute
+
+@Serializable
 data class MovieRoute(
     val movieId: String,
 )
@@ -161,7 +165,7 @@ data class TabBarItem(
 
 val homeTab = TabBarItem(title = CoreR.string.title_home, icon = CoreR.drawable.ic_home, route = HomeRoute)
 val mediaTab = TabBarItem(title = CoreR.string.title_media, icon = CoreR.drawable.ic_library, route = MediaRoute)
-val downloadsTab = TabBarItem(title = CoreR.string.title_download, icon = CoreR.drawable.ic_download, route = Unit, enabled = false)
+val downloadsTab = TabBarItem(title = CoreR.string.title_download, icon = CoreR.drawable.ic_download, route = DownloadsRoute, enabled = true)
 
 val navigationItems = listOf(homeTab, mediaTab, downloadsTab)
 val navigationItemClassNames = navigationItems.map { it.route::class.qualifiedName }
@@ -409,6 +413,13 @@ fun NavigationRoot(
                     },
                 )
             }
+            composable<DownloadsRoute> {
+                DownloadsScreen(
+                    navigateBack = {
+                        navController.safePopBackStack()
+                    },
+                )
+            }
             composable<MovieRoute> { backStackEntry ->
                 val route: MovieRoute = backStackEntry.toRoute()
                 MovieScreen(
@@ -419,6 +430,9 @@ fun NavigationRoot(
                     navigateToPerson = { personId ->
                         navController.safeNavigate(PersonRoute(personId.toString()))
                     },
+                    navigateToDownloads = {
+                        navController.safeNavigate(DownloadsRoute)
+                    }
                 )
             }
             composable<ShowRoute> { backStackEntry ->

@@ -9,4 +9,7 @@ data class EpisodeState(
     val videoMetadata: VideoMetadata? = null,
     val actors: List<FindroidItemPerson> = emptyList(),
     val error: Exception? = null,
+    val downloadInProgress: Boolean = false,
+    val downloadId: Long? = null,
+    val downloadProgress: Int = 0,
 )

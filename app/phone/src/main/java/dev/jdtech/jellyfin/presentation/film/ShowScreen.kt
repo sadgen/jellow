@@ -227,7 +227,7 @@ private fun ShowScreenLayout(
                         onTrailerClick = { uri ->
                             onAction(ShowAction.PlayTrailer(uri))
                         },
-                        onDownloadClick = {},
+                        onDownloadClick = { onAction(ShowAction.Download) },
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(Modifier.height(MaterialTheme.spacings.small))

@@ -11,4 +11,5 @@ sealed interface MovieAction {
     data object UnmarkAsFavorite : MovieAction
     data object OnBackClick : MovieAction
     data class NavigateToPerson(val personId: UUID) : MovieAction
+    data class Download(val onNavigateToDownloads: (() -> Unit)? = null) : MovieAction
 }

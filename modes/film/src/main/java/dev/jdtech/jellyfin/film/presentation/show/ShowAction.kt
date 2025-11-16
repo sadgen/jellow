@@ -13,4 +13,5 @@ sealed interface ShowAction {
     data object OnBackClick : ShowAction
     data class NavigateToItem(val item: FindroidItem) : ShowAction
     data class NavigateToPerson(val personId: UUID) : ShowAction
+    data object Download : ShowAction
 }

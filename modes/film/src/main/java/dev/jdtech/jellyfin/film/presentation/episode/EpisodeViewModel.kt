@@ -7,6 +7,7 @@ import dev.jdtech.jellyfin.film.domain.VideoMetadataParser
 import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.models.FindroidItemPerson
 import dev.jdtech.jellyfin.repository.JellyfinRepository
+import dev.jdtech.jellyfin.utils.Downloader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,6 +23,7 @@ class EpisodeViewModel
 constructor(
     private val repository: JellyfinRepository,
     private val videoMetadataParser: VideoMetadataParser,
+    private val downloader: Downloader,
 ) : ViewModel() {
     private val _state = MutableStateFlow(EpisodeState())
     val state = _state.asStateFlow()
@@ -74,7 +76,66 @@ constructor(
                     loadEpisode(episodeId)
                 }
             }
+            is EpisodeAction.Download -> {
+                viewModelScope.launch {
+                    try {
+                        val episode = state.value.episode
+                        if (episode != null) {
+                            val source = episode.sources.firstOrNull()
+                            if (source != null) {
+                                val (downloadId, error) = downloader.downloadItem(episode, source.id)
+                                if (error != null) {
+                                    _state.emit(_state.value.copy(error = Exception(error.toString())))
+                                } else {
+                                    _state.emit(_state.value.copy(downloadInProgress = true, downloadId = downloadId))
+                                    // 开始监控下载进度
+                                    monitorDownloadProgress(downloadId)
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        _state.emit(_state.value.copy(error = e))
+                    }
+                }
+            }
             else -> Unit
+        }
+    }
+
+    private fun monitorDownloadProgress(downloadId: Long) {
+        viewModelScope.launch {
+            while (state.value.downloadInProgress) {
+                val (status, progress) = downloader.getProgress(downloadId)
+                when (status) {
+                    android.app.DownloadManager.STATUS_RUNNING -> {
+                        // 更新下载进度
+                        _state.emit(_state.value.copy(downloadProgress = progress))
+                    }
+                    android.app.DownloadManager.STATUS_SUCCESSFUL -> {
+                        // 下载完成
+                        _state.emit(_state.value.copy(
+                            downloadInProgress = false,
+                            downloadId = null,
+                            downloadProgress = 100
+                        ))
+                        break
+                    }
+                    android.app.DownloadManager.STATUS_FAILED -> {
+                        // 下载失败
+                        _state.emit(_state.value.copy(
+                            downloadInProgress = false,
+                            downloadId = null,
+                            error = Exception("Download failed")
+                        ))
+                        break
+                    }
+                    else -> {
+                        // 其他状态，继续监控
+                    }
+                }
+                // 每1秒检查一次进度
+                kotlinx.coroutines.delay(1000)
+            }
         }
     }
 }

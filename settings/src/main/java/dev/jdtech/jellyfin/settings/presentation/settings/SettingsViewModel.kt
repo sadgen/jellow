@@ -43,7 +43,7 @@ constructor(
                     nameStringResource = R.string.offline_mode,
                     descriptionStringRes = R.string.offline_mode_summary,
                     iconDrawableId = R.drawable.ic_server_off,
-                    enabled = false,
+                    enabled = true,
                     supportedDeviceTypes = listOf(DeviceType.PHONE),
                     backendPreference = appPreferences.offlineMode,
                 ),
