@@ -45,6 +45,7 @@ val dummyMovie =
             ),
         played = false,
         favorite = true,
+        playCount = 0,
         canPlay = true,
         canDownload = true,
         runtimeTicks = 2000000000L,

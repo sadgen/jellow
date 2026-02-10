@@ -142,6 +142,42 @@ class JellyfinRepositoryImpl(
                 .mapNotNull { it.toFindroidItem(this@JellyfinRepositoryImpl, database) }
         }
 
+    override suspend fun getAllItems(
+        parentId: UUID?,
+        includeTypes: List<BaseItemKind>?,
+        recursive: Boolean,
+    ): List<FindroidItem> =
+        withContext(Dispatchers.IO) {
+            val allItems = mutableListOf<FindroidItem>()
+            var startIndex = 0
+            val limit = 300 // Fetch in chunks
+
+            while (true) {
+                val items =
+                    jellyfinApi.itemsApi
+                        .getItems(
+                            jellyfinApi.userId!!,
+                            parentId = parentId,
+                            includeItemTypes = includeTypes,
+                            recursive = recursive,
+                            startIndex = startIndex,
+                            limit = limit,
+                        )
+                        .content
+                        .items
+
+                if (items.isEmpty()) break
+
+                allItems.addAll(
+                    items.mapNotNull { it.toFindroidItem(this@JellyfinRepositoryImpl, database) }
+                )
+
+                if (items.size < limit) break
+                startIndex += limit
+            }
+            allItems
+        }
+
     override suspend fun getItemsPaging(
         parentId: UUID?,
         includeTypes: List<BaseItemKind>?,

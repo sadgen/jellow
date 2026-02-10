@@ -20,6 +20,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
 import dev.jdtech.jellyfin.core.R
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyEpisode
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyMovie
@@ -58,6 +60,7 @@ fun ItemCard(
                 ) {
                     if (item.isDownloaded()) DownloadedBadge()
                     if (item.played) PlayedBadge()
+                    if (item.playCount > 0) PlayCountBadge(count = item.playCount)
                     item.unplayedItemCount?.takeIf { it > 0 }?.let { ItemCountBadge(it) }
                 }
                 if (direction == Direction.HORIZONTAL) {
@@ -94,6 +97,32 @@ fun ItemCard(
             )
         }
         Spacer(Modifier.height(2.dp))
+    }
+}
+
+@Composable
+fun PlayCountBadge(count: Int, modifier: Modifier = Modifier) {
+    Surface(
+        shape = MaterialTheme.shapes.extraSmall,
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        modifier = modifier,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_play),
+                contentDescription = null,
+                modifier = Modifier.height(10.dp),
+            )
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+            )
+        }
     }
 }
 

@@ -10,6 +10,7 @@ private val dummyMoviesCollection =
         id = UUID.randomUUID(),
         name = "Movies",
         type = CollectionType.Movies,
+        playCount = 0,
         images = FindroidImages(),
     )
 
@@ -18,6 +19,7 @@ private val dummyShowsCollection =
         id = UUID.randomUUID(),
         name = "Shows",
         type = CollectionType.TvShows,
+        playCount = 0,
         images = FindroidImages(),
     )
 

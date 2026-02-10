@@ -19,6 +19,7 @@ interface FindroidItem {
     val runtimeTicks: Long
     val playbackPositionTicks: Long
     val unplayedItemCount: Int?
+    val playCount: Int
     val images: FindroidImages
     val chapters: List<FindroidChapter>
 }

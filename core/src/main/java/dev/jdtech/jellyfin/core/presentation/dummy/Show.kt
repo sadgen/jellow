@@ -15,6 +15,7 @@ val dummyShow =
         sources = emptyList(),
         played = false,
         favorite = false,
+        playCount = 0,
         canPlay = true,
         canDownload = false,
         runtimeTicks = 0L,

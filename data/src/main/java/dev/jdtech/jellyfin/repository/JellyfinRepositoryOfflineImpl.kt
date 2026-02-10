@@ -76,6 +76,14 @@ class JellyfinRepositoryOfflineImpl(
         return null
     }
 
+    override suspend fun getAllItems(
+        parentId: UUID?,
+        includeTypes: List<BaseItemKind>?,
+        recursive: Boolean,
+    ): List<FindroidItem> {
+        return emptyList()
+    }
+
     override suspend fun getItems(
         parentId: UUID?,
         includeTypes: List<BaseItemKind>?,
