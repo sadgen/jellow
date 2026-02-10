@@ -111,9 +111,9 @@ fun ShowScreen(
 private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
     val safePadding = rememberSafePadding()
 
-    val paddingStart = safePadding.start + MaterialTheme.spacings.default
-    val paddingEnd = safePadding.end + MaterialTheme.spacings.default
-    val paddingBottom = safePadding.bottom + MaterialTheme.spacings.default
+    val paddingStart = safePadding.start + MaterialTheme.spacings.small
+    val paddingEnd = safePadding.end + MaterialTheme.spacings.small
+    val paddingBottom = safePadding.bottom + MaterialTheme.spacings.small
 
     val scrollState = rememberScrollState()
 
@@ -262,7 +262,7 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                     }
                     LazyRow(
                         contentPadding = PaddingValues(start = paddingStart, end = paddingEnd),
-                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
+                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
                     ) {
                         items(items = state.seasons, key = { item -> item.id }) { season ->
                             ItemCard(

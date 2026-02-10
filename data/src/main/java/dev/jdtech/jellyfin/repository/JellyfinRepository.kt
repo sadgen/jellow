@@ -10,6 +10,7 @@ import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidSegment
 import dev.jdtech.jellyfin.models.FindroidShow
 import dev.jdtech.jellyfin.models.FindroidSource
+import dev.jdtech.jellyfin.models.FindroidTrickplayInfo
 import dev.jdtech.jellyfin.models.SortBy
 import dev.jdtech.jellyfin.models.SortOrder
 import java.util.UUID
@@ -97,6 +98,8 @@ interface JellyfinRepository {
     suspend fun getStreamUrl(itemId: UUID, mediaSourceId: String): String
 
     suspend fun getSegments(itemId: UUID): List<FindroidSegment>
+
+    suspend fun getTrickplayInfoForItem(itemId: UUID): FindroidTrickplayInfo?
 
     suspend fun getTrickplayData(itemId: UUID, width: Int, index: Int): ByteArray?
 

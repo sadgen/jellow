@@ -26,6 +26,8 @@ import dev.jdtech.jellyfin.models.toFindroidSeason
 import dev.jdtech.jellyfin.models.toFindroidSegment
 import dev.jdtech.jellyfin.models.toFindroidShow
 import dev.jdtech.jellyfin.models.toFindroidSource
+import dev.jdtech.jellyfin.models.FindroidTrickplayInfo
+import dev.jdtech.jellyfin.models.toFindroidTrickplayInfo
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import java.io.File
 import java.util.UUID
@@ -406,6 +408,22 @@ class JellyfinRepositoryImpl(
             } catch (e: Exception) {
                 Timber.e(e)
                 return@withContext emptyList()
+            }
+        }
+
+    override suspend fun getTrickplayInfoForItem(itemId: UUID): FindroidTrickplayInfo? =
+        withContext(Dispatchers.IO) {
+            try {
+                val item = jellyfinApi.userLibraryApi
+                    .getItem(itemId = itemId, userId = jellyfinApi.userId!!)
+                    .content
+                val trickplay = item.trickplay ?: return@withContext null
+                val resolutions = trickplay.values.firstOrNull() ?: return@withContext null
+                val bestResolution = resolutions[resolutions.keys.max()]
+                    ?: return@withContext null
+                bestResolution.toFindroidTrickplayInfo()
+            } catch (_: Exception) {
+                null
             }
         }
 

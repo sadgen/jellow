@@ -91,9 +91,9 @@ fun SeasonScreen(
 private fun SeasonScreenLayout(state: SeasonState, onAction: (SeasonAction) -> Unit) {
     val safePadding = rememberSafePadding()
 
-    val paddingStart = safePadding.start + MaterialTheme.spacings.default
-    val paddingEnd = safePadding.end + MaterialTheme.spacings.default
-    val paddingBottom = safePadding.bottom + MaterialTheme.spacings.default
+    val paddingStart = safePadding.start + MaterialTheme.spacings.small
+    val paddingEnd = safePadding.end + MaterialTheme.spacings.small
+    val paddingBottom = safePadding.bottom + MaterialTheme.spacings.small
 
     val lazyListState = rememberLazyListState()
 
@@ -103,7 +103,7 @@ private fun SeasonScreenLayout(state: SeasonState, onAction: (SeasonAction) -> U
                 modifier = Modifier.fillMaxWidth(),
                 state = lazyListState,
                 contentPadding = PaddingValues(bottom = paddingBottom),
-                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
             ) {
                 item {
                     ItemHeader(

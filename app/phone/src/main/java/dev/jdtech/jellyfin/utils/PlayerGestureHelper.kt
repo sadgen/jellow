@@ -1,7 +1,6 @@
 package dev.jdtech.jellyfin.utils
 
 import android.annotation.SuppressLint
-import android.content.res.Resources
 import android.graphics.Bitmap
 import android.media.AudioManager
 import android.os.Build
@@ -66,8 +65,7 @@ class PlayerGestureHelper(
     private var playbackSpeedIncrease: Float = 2f
     private var lastPlaybackSpeed: Float = 0f
 
-    private val screenWidth = Resources.getSystem().displayMetrics.widthPixels
-    private val screenHeight = Resources.getSystem().displayMetrics.heightPixels
+
 
     var currentTrickplay: Trickplay? = null
     private val trickplayRoundedCorners = RoundedCornersTransformation(10f)
@@ -519,6 +517,9 @@ class PlayerGestureHelper(
 
     /** Check if [firstEvent] is in the gesture exclusion area */
     private fun inExclusionArea(firstEvent: MotionEvent): Boolean {
+        val currentWidth = playerView.width
+        val currentHeight = playerView.height
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val insets =
                 playerView.rootWindowInsets.getInsetsIgnoringVisibility(
@@ -527,21 +528,21 @@ class PlayerGestureHelper(
 
             if (
                 (firstEvent.x < insets.left) ||
-                    (firstEvent.x > (screenWidth - insets.right)) ||
+                    (firstEvent.x > (currentWidth - insets.right)) ||
                     (firstEvent.y < insets.top) ||
-                    (firstEvent.y > (screenHeight - insets.bottom))
+                    (firstEvent.y > (currentHeight - insets.bottom))
             ) {
                 return true
             }
         } else if (
             firstEvent.y < playerView.resources.dip(Constants.GESTURE_EXCLUSION_AREA_VERTICAL) ||
                 firstEvent.y >
-                    screenHeight -
+                    currentHeight -
                         playerView.resources.dip(Constants.GESTURE_EXCLUSION_AREA_VERTICAL) ||
                 firstEvent.x <
                     playerView.resources.dip(Constants.GESTURE_EXCLUSION_AREA_HORIZONTAL) ||
                 firstEvent.x >
-                    screenWidth -
+                    currentWidth -
                         playerView.resources.dip(Constants.GESTURE_EXCLUSION_AREA_HORIZONTAL)
         ) {
             return true
