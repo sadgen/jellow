@@ -6,6 +6,12 @@
     android:layout_height="match_parent"
     tools:context=".PlayerActivity">
 
+    <androidx.media3.exoplayer.video.spherical.SphericalGLSurfaceView
+        android:id="@+id/spherical_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+
     <androidx.media3.ui.PlayerView
         android:id="@+id/player_view"
         android:layout_width="match_parent"
@@ -185,4 +191,14 @@
         android:alpha="0"
         android:src="@drawable/transparent_circle"
         tools:ignore="ContentDescription" />
+    <View
+        android:id="@+id/vr_steering_indicator"
+        android:layout_width="8dp"
+        android:layout_height="8dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="16dp"
+        android:alpha="0"
+        android:background="@drawable/blue_dot"
+        android:visibility="gone"
+        tools:visibility="visible" />
 </FrameLayout>

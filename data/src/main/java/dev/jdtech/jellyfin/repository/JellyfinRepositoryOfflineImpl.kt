@@ -93,6 +93,7 @@ class JellyfinRepositoryOfflineImpl(
         sortOrder: SortOrder,
         startIndex: Int?,
         limit: Int?,
+        searchTerm: String?,
     ): List<FindroidItem> {
         return emptyList()
     }
@@ -103,6 +104,7 @@ class JellyfinRepositoryOfflineImpl(
         recursive: Boolean,
         sortBy: SortBy,
         sortOrder: SortOrder,
+        searchTerm: String?,
     ): Flow<PagingData<FindroidItem>> {
         TODO("Not yet implemented")
     }

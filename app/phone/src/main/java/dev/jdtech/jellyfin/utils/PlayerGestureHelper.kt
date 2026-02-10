@@ -41,6 +41,7 @@ class PlayerGestureHelper(
     private val playerView: PlayerView,
     private val audioManager: AudioManager,
 ) {
+    var vrInterceptListener: ((MotionEvent) -> Boolean)? = null
     /**
      * Tracks whether video content should fill the screen, cutting off unwanted content on the
      * sides. Useful on wide-screen phones to remove black bars from some movies.
@@ -584,6 +585,9 @@ class PlayerGestureHelper(
 
         @Suppress("ClickableViewAccessibility")
         playerView.setOnTouchListener { _, event ->
+            if (vrInterceptListener?.invoke(event) == true) {
+                return@setOnTouchListener true
+            }
             if (playerView.useController) {
                 currentNumberOfPointers = event.pointerCount
                 when (event.pointerCount) {
