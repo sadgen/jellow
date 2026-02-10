@@ -17,6 +17,7 @@ data class FindroidFolder(
     override val runtimeTicks: Long = 0L,
     override val playbackPositionTicks: Long = 0L,
     override val unplayedItemCount: Int?,
+    override val playCount: Int,
     override val images: FindroidImages,
     override val chapters: List<FindroidChapter> = emptyList(),
 ) : FindroidItem
@@ -28,6 +29,7 @@ fun BaseItemDto.toFindroidFolder(jellyfinRepository: JellyfinRepository): Findro
         played = userData?.played == true,
         favorite = userData?.isFavorite == true,
         unplayedItemCount = userData?.unplayedItemCount,
+        playCount = userData?.playCount ?: 0,
         images = toFindroidImages(jellyfinRepository),
     )
 }

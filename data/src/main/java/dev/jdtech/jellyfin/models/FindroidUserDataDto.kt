@@ -1,5 +1,6 @@
 package dev.jdtech.jellyfin.models
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import java.util.UUID
 
@@ -9,6 +10,8 @@ data class FindroidUserDataDto(
     val itemId: UUID,
     val played: Boolean,
     val favorite: Boolean,
+    @ColumnInfo(defaultValue = "0")
+    val playCount: Int,
     val playbackPositionTicks: Long,
     val toBeSynced: Boolean = false,
 )
@@ -19,6 +22,7 @@ fun FindroidItem.toFindroidUserDataDto(userId: UUID): FindroidUserDataDto {
         itemId = id,
         played = played,
         favorite = favorite,
+        playCount = playCount,
         playbackPositionTicks = playbackPositionTicks,
     )
 }

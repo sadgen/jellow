@@ -17,6 +17,7 @@ val dummySeason =
         episodes = emptyList(),
         played = false,
         favorite = false,
+        playCount = 0,
         canPlay = true,
         canDownload = false,
         unplayedItemCount = null,

@@ -2,6 +2,7 @@ package dev.jdtech.jellyfin.film.presentation.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.jdtech.jellyfin.models.CollectionType
@@ -99,14 +100,63 @@ constructor(
         }
     }
 
+    fun toggleDuplicateFinder() {
+        val newEnabled = !_state.value.isDuplicateFinderEnabled
+        viewModelScope.launch {
+            _state.emit(_state.value.copy(isDuplicateFinderEnabled = newEnabled))
+        }
+        if (newEnabled) {
+            loadDuplicates()
+        } else {
+            loadItems()
+        }
+    }
+
+    private fun loadDuplicates() {
+        val itemType =
+            when (libraryType) {
+                CollectionType.Movies -> listOf(BaseItemKind.MOVIE)
+                CollectionType.TvShows -> listOf(BaseItemKind.SERIES)
+                CollectionType.BoxSets -> listOf(BaseItemKind.BOX_SET)
+                else -> null
+            }
+
+        viewModelScope.launch {
+            _state.emit(_state.value.copy(isLoading = true, error = null))
+            try {
+                val allItems =
+                    jellyfinRepository.getAllItems(
+                        parentId = parentId,
+                        includeTypes = itemType,
+                        recursive = true,
+                    )
+
+                val duplicates =
+                    allItems
+                        .groupBy { it.name.lowercase().trim() }
+                        .filter { it.value.size > 1 }
+                        .flatMap { it.value }
+
+                _state.emit(_state.value.copy(items = MutableStateFlow(PagingData.from(duplicates)), isLoading = false))
+            } catch (e: Exception) {
+                _state.emit(_state.value.copy(error = e, isLoading = false))
+            }
+        }
+    }
+
     fun onAction(action: LibraryAction) {
         when (action) {
             is LibraryAction.ChangeSorting -> {
                 if (action.sortBy != this.sortBy || action.sortOrder != this.sortOrder) {
                     setSorting(sortBy = action.sortBy, sortOrder = action.sortOrder)
-                    loadItems()
+                    if (_state.value.isDuplicateFinderEnabled) {
+                        loadDuplicates()
+                    } else {
+                        loadItems()
+                    }
                 }
             }
+            LibraryAction.ToggleDuplicateFinder -> toggleDuplicateFinder()
             else -> Unit
         }
     }

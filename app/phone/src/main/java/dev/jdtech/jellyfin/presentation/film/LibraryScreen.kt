@@ -126,6 +126,16 @@ private fun LibraryScreenLayout(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { onAction(LibraryAction.ToggleDuplicateFinder) }) {
+                        Icon(
+                            painter =
+                                painterResource(
+                                    if (state.isDuplicateFinderEnabled) CoreR.drawable.ic_eye_off
+                                    else CoreR.drawable.ic_eye
+                                ),
+                            contentDescription = null,
+                        )
+                    }
                     IconButton(onClick = { showSortByDialog = true }) {
                         Icon(
                             painter = painterResource(CoreR.drawable.ic_arrow_down_up),

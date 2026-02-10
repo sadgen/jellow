@@ -12,5 +12,6 @@ data class LibraryState(
     val sortBy: SortBy = SortBy.NAME,
     val sortOrder: SortOrder = SortOrder.ASCENDING,
     val isLoading: Boolean = false,
+    val isDuplicateFinderEnabled: Boolean = false,
     val error: Exception? = null,
 )

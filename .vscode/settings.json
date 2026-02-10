@@ -1,0 +1,9 @@
+{
+    "java.configuration.runtimes": [
+        {
+            "name": "JavaSE-21",
+            "path": "/home/sadgen/.jdk/jdk-21.0.10+7",
+            "default": true
+        }
+    ]
+}

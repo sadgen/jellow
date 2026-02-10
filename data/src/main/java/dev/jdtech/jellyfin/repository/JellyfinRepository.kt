@@ -47,6 +47,12 @@ interface JellyfinRepository {
         limit: Int? = null,
     ): List<FindroidItem>
 
+    suspend fun getAllItems(
+        parentId: UUID? = null,
+        includeTypes: List<BaseItemKind>? = null,
+        recursive: Boolean = false,
+    ): List<FindroidItem>
+
     suspend fun getItemsPaging(
         parentId: UUID? = null,
         includeTypes: List<BaseItemKind>? = null,

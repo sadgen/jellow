@@ -17,6 +17,7 @@ data class FindroidCollection(
     override val runtimeTicks: Long = 0L,
     override val playbackPositionTicks: Long = 0L,
     override val unplayedItemCount: Int? = null,
+    override val playCount: Int = 0,
     val type: CollectionType,
     override val images: FindroidImages,
     override val chapters: List<FindroidChapter> = emptyList(),
@@ -33,6 +34,7 @@ fun BaseItemDto.toFindroidCollection(jellyfinRepository: JellyfinRepository): Fi
         id = id,
         name = name.orEmpty(),
         type = type,
+        playCount = userData?.playCount ?: 0,
         images = toFindroidImages(jellyfinRepository),
     )
 }
