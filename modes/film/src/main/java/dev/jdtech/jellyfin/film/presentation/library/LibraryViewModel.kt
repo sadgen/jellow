@@ -74,6 +74,7 @@ constructor(
                                 else sortBy, // Jellyfin uses a different enum for sorting series by
                             // data played
                             sortOrder = sortOrder,
+                            searchTerm = if (_state.value.isVrFilterEnabled) "VR" else null,
                         )
                         .cachedIn(viewModelScope)
                 _state.emit(_state.value.copy(items = items))
@@ -134,7 +135,7 @@ constructor(
 
                 val duplicates =
                     allItems
-                        .groupBy { it.name.lowercase().trim() }
+                        .groupBy { it.name.substringBefore(" ").lowercase().trim() }
                         .filter { it.value.size > 1 }
                         .flatMap { it.value }
 
@@ -158,6 +159,17 @@ constructor(
                 }
             }
             LibraryAction.ToggleDuplicateFinder -> toggleDuplicateFinder()
+            LibraryAction.ToggleVrFilter -> {
+                val newEnabled = !_state.value.isVrFilterEnabled
+                viewModelScope.launch {
+                    _state.emit(_state.value.copy(isVrFilterEnabled = newEnabled))
+                    if (_state.value.isDuplicateFinderEnabled) {
+                        loadDuplicates()
+                    } else {
+                        loadItems()
+                    }
+                }
+            }
             else -> Unit
         }
     }

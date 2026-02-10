@@ -40,11 +40,18 @@ import dev.jdtech.jellyfin.player.local.presentation.PlayerEvents
 import dev.jdtech.jellyfin.player.local.presentation.PlayerViewModel
 import dev.jdtech.jellyfin.presentation.player.SpeedSelectionDialogFragment
 import dev.jdtech.jellyfin.presentation.player.TrackSelectionDialogFragment
+import dev.jdtech.jellyfin.presentation.player.VrModeSelectionDialogFragment
+import androidx.media3.exoplayer.video.spherical.SphericalGLSurfaceView
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.utils.PlayerGestureHelper
 import dev.jdtech.jellyfin.utils.PreviewScrubListener
 import java.util.UUID
 import javax.inject.Inject
+import android.view.GestureDetector
+import android.view.MotionEvent
+import android.os.Vibrator
+import android.os.VibrationEffect
+import android.content.Context
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -65,6 +72,16 @@ class PlayerActivity : BasePlayerActivity() {
     private var forcePortrait: Boolean = false
 
     private lateinit var skipSegmentButton: Button
+    private lateinit var btnVr: ImageButton
+    private var isVrSteering: Boolean = false
+    private var vrSteeringRunnable: Runnable? = null
+    private val VR_STEERING_DELAY = 450L
+    private var vrSteeringStartX = 0f
+    private var vrSteeringStartY = 0f
+    private var vrSteeringCurrentX = 0f
+    private var vrSteeringCurrentY = 0f
+    private val VR_STEERING_SENSITIVITY = 2.0f
+    private var originalTouchListener: View.OnTouchListener? = null
 
     private val isPipSupported by lazy {
         // Check if device has PiP feature
@@ -89,6 +106,20 @@ class PlayerActivity : BasePlayerActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (::binding.isInitialized && binding.sphericalView.isVisible) {
+            binding.sphericalView.onResume()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (::binding.isInitialized && binding.sphericalView.isVisible) {
+            binding.sphericalView.onPause()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -96,6 +127,11 @@ class PlayerActivity : BasePlayerActivity() {
         val itemKind = intent.extras!!.getString("itemKind")
         val startFromBeginning = intent.extras!!.getBoolean("startFromBeginning")
         forcePortrait = intent.extras!!.getBoolean("forcePortrait", false)
+        val startInVr = intent.extras!!.getBoolean("startInVr", false)
+
+        if (startInVr) {
+            viewModel.setVrMode(true, false)
+        }
 
         binding = ActivityPlayerBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -145,6 +181,7 @@ class PlayerActivity : BasePlayerActivity() {
         val pipButton = binding.playerView.findViewById<ImageButton>(R.id.btn_pip)
         val lockButton = binding.playerView.findViewById<ImageButton>(R.id.btn_lockview)
         val unlockButton = binding.playerView.findViewById<ImageButton>(R.id.btn_unlock)
+        btnVr = binding.playerView.findViewById(R.id.btn_vr)
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -216,8 +253,22 @@ class PlayerActivity : BasePlayerActivity() {
                                 speedButton.imageAlpha = 255
                                 pipButton.isEnabled = true
                                 pipButton.imageAlpha = 255
+                                btnVr.isEnabled = true
+                                btnVr.imageAlpha = 255
                             }
                         }
+                    }
+                }
+
+                launch {
+                    viewModel.playerVrMode.collect { isVrEnabled ->
+                        updateVrMode(isVrEnabled)
+                    }
+                }
+
+                launch {
+                    viewModel.playerVrProjection.collect { projection ->
+                        updateVrProjection(projection)
                     }
                 }
 
@@ -286,6 +337,9 @@ class PlayerActivity : BasePlayerActivity() {
             pipSpace.isVisible = false
         }
 
+        btnVr.isEnabled = false
+        btnVr.imageAlpha = 75
+
         audioButton.setOnClickListener {
             TrackSelectionDialogFragment(C.TRACK_TYPE_AUDIO, viewModel)
                 .show(supportFragmentManager, "trackselectiondialog")
@@ -333,6 +387,22 @@ class PlayerActivity : BasePlayerActivity() {
                 .show(supportFragmentManager, "speedselectiondialog")
         }
 
+        btnVr.setOnClickListener {
+            if (!viewModel.playerVrMode.value) {
+                viewModel.toggleVrMode()
+            } else {
+                VrModeSelectionDialogFragment(viewModel)
+                    .show(supportFragmentManager, "vrmodeselectiondialog")
+            }
+        }
+
+        btnVr.setOnLongClickListener {
+            if (viewModel.playerVrMode.value) {
+                viewModel.toggleVrMode()
+            }
+            true
+        }
+
         pipButton.setOnClickListener { pictureInPicture() }
 
         // Set marker color
@@ -353,6 +423,141 @@ class PlayerActivity : BasePlayerActivity() {
         )
         hideSystemUI()
         applyPortraitUIAdjustments()
+    }
+
+    private fun handleVrSteeringIntercept(event: MotionEvent): Boolean {
+        if (!binding.sphericalView.isVisible) return false
+
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                vrSteeringRunnable?.let { handler.removeCallbacks(it) }
+                vrSteeringStartX = event.x
+                vrSteeringStartY = event.y
+                vrSteeringCurrentX = event.x
+                vrSteeringCurrentY = event.y
+                vrSteeringRunnable = Runnable {
+                    if (binding.sphericalView.isVisible) {
+                        Timber.d("VR: Long press triggered for steering (manual)")
+                        vibrateForSteering()
+                        isVrSteering = true
+                        showVrSteeringIndicator()
+                        
+                        val now = android.os.SystemClock.uptimeMillis()
+                        // Use the START coordinates to initialize the drag in spherical view
+                        val downEvent = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, vrSteeringStartX, vrSteeringStartY, 0)
+                        binding.sphericalView.dispatchTouchEvent(downEvent)
+                        downEvent.recycle()
+
+                        // IMPORTANT: Immediately dispatch the CURRENT coordinates MOVE event 
+                        // if the finger has already moved since the DOWN event.
+                        if (vrSteeringCurrentX != vrSteeringStartX || vrSteeringCurrentY != vrSteeringStartY) {
+                            val scaledX = vrSteeringStartX + (vrSteeringCurrentX - vrSteeringStartX) * VR_STEERING_SENSITIVITY
+                            val scaledY = vrSteeringStartY + (vrSteeringCurrentY - vrSteeringStartY) * VR_STEERING_SENSITIVITY
+                            val moveEvent = MotionEvent.obtain(now, now, MotionEvent.ACTION_MOVE, scaledX, scaledY, 0)
+                            binding.sphericalView.dispatchTouchEvent(moveEvent)
+                            moveEvent.recycle()
+                        }
+                    }
+                }
+                handler.postDelayed(vrSteeringRunnable!!, VR_STEERING_DELAY)
+                return false
+            }
+            MotionEvent.ACTION_MOVE -> {
+                vrSteeringCurrentX = event.x
+                vrSteeringCurrentY = event.y
+                
+                if (isVrSteering) {
+                    val scaledX = vrSteeringStartX + (event.x - vrSteeringStartX) * VR_STEERING_SENSITIVITY
+                    val scaledY = vrSteeringStartY + (event.y - vrSteeringStartY) * VR_STEERING_SENSITIVITY
+                    
+                    val now = android.os.SystemClock.uptimeMillis()
+                    val moveEvent = MotionEvent.obtain(now, now, MotionEvent.ACTION_MOVE, scaledX, scaledY, 0)
+                    binding.sphericalView.dispatchTouchEvent(moveEvent)
+                    moveEvent.recycle()
+                    return true
+                } else {
+                    val dx = event.x - vrSteeringStartX
+                    val dy = event.y - vrSteeringStartY
+                    // Tighten threshold to 15dp to balance reliability vs accidental pop outs
+                    if (Math.hypot(dx.toDouble(), dy.toDouble()) > 15.dpToPx()) {
+                        vrSteeringRunnable?.let { 
+                            handler.removeCallbacks(it)
+                            vrSteeringRunnable = null
+                        }
+                    }
+                }
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                vrSteeringRunnable?.let { 
+                    handler.removeCallbacks(it)
+                    vrSteeringRunnable = null
+                }
+                if (isVrSteering) {
+                    val scaledX = vrSteeringStartX + (event.x - vrSteeringStartX) * VR_STEERING_SENSITIVITY
+                    val scaledY = vrSteeringStartY + (event.y - vrSteeringStartY) * VR_STEERING_SENSITIVITY
+                    
+                    val now = android.os.SystemClock.uptimeMillis()
+                    val upEvent = MotionEvent.obtain(now, now, event.actionMasked, scaledX, scaledY, 0)
+                    binding.sphericalView.dispatchTouchEvent(upEvent)
+                    upEvent.recycle()
+                    
+                    isVrSteering = false
+                    hideVrSteeringIndicator()
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    private fun vibrateForSteering() {
+        try {
+            val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            if (vibrator != null && vibrator.hasVibrator()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    vibrator.vibrate(VibrationEffect.createOneShot(150, VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    @Suppress("DEPRECATION")
+                    vibrator.vibrate(150)
+                }
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to vibrate")
+        }
+    }
+
+    private fun showVrSteeringIndicator() {
+        binding.vrSteeringIndicator.apply {
+            alpha = 0f
+            scaleX = 0.5f
+            scaleY = 0.5f
+            visibility = View.VISIBLE
+            animate()
+                .alpha(1f)
+                .scaleX(1.4f)
+                .scaleY(1.4f)
+                .setDuration(250)
+                .withEndAction {
+                    animate()
+                        .scaleX(1.1f)
+                        .scaleY(1.1f)
+                        .setDuration(100)
+                        .start()
+                }
+                .start()
+        }
+    }
+
+    private fun hideVrSteeringIndicator() {
+        binding.vrSteeringIndicator.animate()
+            .alpha(0f)
+            .scaleX(0.5f)
+            .scaleY(0.5f)
+            .setDuration(200)
+            .withEndAction {
+                binding.vrSteeringIndicator.visibility = View.GONE
+            }
+            .start()
     }
 
     private fun applyPortraitUIAdjustments() {
@@ -385,6 +590,58 @@ class PlayerActivity : BasePlayerActivity() {
         playbackControls.layoutParams = playbackParams
     }
 
+    private fun updateVrMode(enabled: Boolean) {
+        if (enabled) {
+            binding.sphericalView.visibility = View.VISIBLE
+            binding.sphericalView.onResume()
+            binding.playerView.videoSurfaceView?.visibility = View.GONE
+            binding.playerView.setBackgroundColor(Color.TRANSPARENT)
+            
+            // Hook into PlayerGestureHelper
+            playerGestureHelper?.vrInterceptListener = { event ->
+                handleVrSteeringIntercept(event)
+            }
+            
+            viewModel.player.setVideoSurfaceView(binding.sphericalView)
+            btnVr.setColorFilter(Color.parseColor("#00a0d6"))
+            
+            // Center the view after a short delay to ensure rendering started
+            handler.postDelayed({ centerVrView() }, 500)
+        } else {
+            binding.sphericalView.onPause()
+            binding.sphericalView.visibility = View.GONE
+            binding.playerView.videoSurfaceView?.visibility = View.VISIBLE
+            binding.playerView.setBackgroundColor(Color.BLACK)
+            
+            // Clear the hook
+            playerGestureHelper?.vrInterceptListener = null
+            
+            // Important: Re-attach the surface view of the PlayerView
+            val surfaceView = binding.playerView.videoSurfaceView
+            if (surfaceView is SurfaceView) {
+                 viewModel.player.setVideoSurfaceView(surfaceView)
+            } else {
+                 // Fallback if null or not surface view, clear it to let PlayerView handle generic surface logic
+                 viewModel.player.clearVideoSurface()
+                 viewModel.player.setVideoSurfaceView(surfaceView as? SurfaceView)
+            }
+            
+            btnVr.clearColorFilter()
+        }
+    }
+
+    private fun updateVrProjection(projection: String) {
+        if (projection == "PLANE_2D") {
+            if (viewModel.playerVrMode.value) {
+                viewModel.toggleVrMode()
+            }
+            return
+        }
+        
+        // Use default if nothing specific matches for now, ensuring we stay in VR
+        viewModel.player.setVideoSurfaceView(binding.sphericalView)
+    }
+
     private fun Int.dpToPx(): Int {
         return (this * resources.displayMetrics.density).toInt()
     }
@@ -401,6 +658,11 @@ class PlayerActivity : BasePlayerActivity() {
         val itemId = UUID.fromString(intent.extras!!.getString("itemId"))
         val itemKind = intent.extras!!.getString("itemKind")
         val startFromBeginning = intent.extras!!.getBoolean("startFromBeginning")
+        val startInVr = intent.extras!!.getBoolean("startInVr", false)
+
+        if (startInVr) {
+            viewModel.setVrMode(true, false)
+        }
 
         viewModel.initializePlayer(
             itemId = itemId,
@@ -408,6 +670,38 @@ class PlayerActivity : BasePlayerActivity() {
             startFromBeginning = startFromBeginning,
         )
         applyPortraitUIAdjustments()
+    }
+
+    private fun centerVrView() {
+        if (!binding.sphericalView.isVisible) return
+        
+        Timber.d("VR: Force centering view")
+        // Simulate a substantial drag sequence to "wake up" the TouchTracker and ensure it resets
+        // SphericalGLSurfaceView initializes its internal rotation based on sensor or first touch.
+        // We'll dispatch a small back-and-forth movement at the center.
+        handler.post {
+            val now = android.os.SystemClock.uptimeMillis()
+            val centerX = resources.displayMetrics.widthPixels / 2f
+            val centerY = resources.displayMetrics.heightPixels / 2f
+            
+            // DOWN at center
+            val down = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, centerX, centerY, 0)
+            binding.sphericalView.dispatchTouchEvent(down)
+            
+            // Small MOVEs to register intent
+            for (i in 1..5) {
+                val move = MotionEvent.obtain(now, now + i * 10, MotionEvent.ACTION_MOVE, centerX + i, centerY, 0)
+                binding.sphericalView.dispatchTouchEvent(move)
+                move.recycle()
+            }
+            
+            // UP
+            val up = MotionEvent.obtain(now, now + 60, MotionEvent.ACTION_UP, centerX + 5, centerY, 0)
+            binding.sphericalView.dispatchTouchEvent(up)
+            
+            down.recycle()
+            up.recycle()
+        }
     }
 
     override fun onUserLeaveHint() {

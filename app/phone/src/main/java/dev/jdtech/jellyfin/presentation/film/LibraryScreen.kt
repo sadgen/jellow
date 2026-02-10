@@ -109,6 +109,7 @@ fun LibraryScreen(
             intent.putExtra("itemKind", itemKind)
             intent.putExtra("startFromBeginning", false)
             intent.putExtra("forcePortrait", true)
+            intent.putExtra("startInVr", state.isVrFilterEnabled)
             context.startActivity(intent)
         },
     )
@@ -156,6 +157,13 @@ private fun LibraryScreenLayout(
                                     else CoreR.drawable.ic_eye
                                 ),
                             contentDescription = null,
+                        )
+                    }
+                    IconButton(onClick = { onAction(LibraryAction.ToggleVrFilter) }) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_vr),
+                            contentDescription = null,
+                            tint = if (state.isVrFilterEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                         )
                     }
                     IconButton(onClick = { showSortByDialog = true }) {

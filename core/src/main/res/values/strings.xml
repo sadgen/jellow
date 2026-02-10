@@ -108,4 +108,11 @@
     <string name="download_paused">Paused</string>
     <string name="download_downloading">Downloading…</string>
     <string name="download_failed">Failed to download</string>
+    <string name="player_controls_vr_mode">VR Mode</string>
+    <string name="player_vr_360_2d">360° 全景 (2D)</string>
+    <string name="player_vr_360_3d_lr">360° 3D (左右)</string>
+    <string name="player_vr_360_3d_tb">360° 3D (上下)</string>
+    <string name="player_vr_180_2d">180° 半球 (2D)</string>
+    <string name="player_vr_180_3d_lr">180° 3D (左右)</string>
+    <string name="player_vr_plane_2d">📺 平面影院</string>
 </resources>

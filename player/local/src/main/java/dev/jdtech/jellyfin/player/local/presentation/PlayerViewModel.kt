@@ -101,6 +101,10 @@ constructor(
     var playbackSpeed: Float = 1f
 
     var isInPictureInPictureMode: Boolean = false
+    private val _playerVrMode = MutableStateFlow(appPreferences.getValue(appPreferences.playerVrMode))
+    val playerVrMode = _playerVrMode.asStateFlow()
+    private val _playerVrProjection = MutableStateFlow(appPreferences.getValue(appPreferences.playerVrProjection))
+    val playerVrProjection = _playerVrProjection.asStateFlow()
 
     init {
         segmentsSkipButton = appPreferences.getValue(appPreferences.playerMediaSegmentsSkipButton)
@@ -267,6 +271,22 @@ constructor(
         currentMediaItemIndex = 0
         player.removeListener(this)
         player.release()
+    }
+
+    fun toggleVrMode() {
+        setVrMode(!_playerVrMode.value, true)
+    }
+
+    fun setVrMode(enabled: Boolean, persistent: Boolean = true) {
+        _playerVrMode.update { enabled }
+        if (persistent) {
+            appPreferences.setValue(appPreferences.playerVrMode, enabled)
+        }
+    }
+
+    fun setVrProjection(projection: String) {
+        _playerVrProjection.update { projection }
+        appPreferences.setValue(appPreferences.playerVrProjection, projection)
     }
 
     fun updatePlaybackProgress() {

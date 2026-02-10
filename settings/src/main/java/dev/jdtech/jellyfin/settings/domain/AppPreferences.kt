@@ -24,6 +24,8 @@ class AppPreferences @Inject constructor(val sharedPreferences: SharedPreference
 
     // Player
     val playerBrightness = Preference("pref_player_brightness", -1.0f)
+    val playerVrMode = Preference("pref_player_vr_mode", false)
+    val playerVrProjection = Preference("pref_player_vr_projection", "360_2D")
 
     // Player - mpv
     val playerMpv = Preference("pref_player_mpv", false)

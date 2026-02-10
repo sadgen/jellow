@@ -12,4 +12,6 @@ sealed interface LibraryAction {
     data class ChangeSorting(val sortBy: SortBy, val sortOrder: SortOrder) : LibraryAction
 
     data object ToggleDuplicateFinder : LibraryAction
+
+    data object ToggleVrFilter : LibraryAction
 }
