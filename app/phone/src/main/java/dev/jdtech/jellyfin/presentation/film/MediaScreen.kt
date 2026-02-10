@@ -41,6 +41,7 @@ import dev.jdtech.jellyfin.presentation.film.components.FilmSearchBar
 import dev.jdtech.jellyfin.presentation.film.components.ItemCard
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
+import dev.jdtech.jellyfin.presentation.utils.GridCellsAdaptiveWithMinColumns
 import dev.jdtech.jellyfin.presentation.utils.rememberSafePadding
 
 @Composable
@@ -91,9 +92,9 @@ private fun MediaScreenLayout(
 ) {
     val safePadding = rememberSafePadding(handleStartInsets = false)
 
-    val paddingStart = safePadding.start + MaterialTheme.spacings.default
-    val paddingEnd = safePadding.end + MaterialTheme.spacings.default
-    val paddingBottom = safePadding.bottom + MaterialTheme.spacings.default
+    val paddingStart = safePadding.start + MaterialTheme.spacings.small
+    val paddingEnd = safePadding.end + MaterialTheme.spacings.small
+    val paddingBottom = safePadding.bottom + MaterialTheme.spacings.small
 
     val contentPaddingTop by
         animateDpAsState(
@@ -116,7 +117,7 @@ private fun MediaScreenLayout(
             ) -> 320.dp
             windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND) ->
                 240.dp
-            else -> 160.dp
+            else -> 110.dp
         }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -130,7 +131,7 @@ private fun MediaScreenLayout(
             paddingEnd = paddingEnd,
         )
         LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = minColumnSize),
+            columns = GridCellsAdaptiveWithMinColumns(minSize = minColumnSize, minColumns = 3),
             modifier = Modifier.fillMaxSize(),
             contentPadding =
                 PaddingValues(
@@ -139,8 +140,8 @@ private fun MediaScreenLayout(
                     end = paddingEnd,
                     bottom = paddingBottom,
                 ),
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 FavoritesCard(onClick = { onAction(MediaAction.OnFavoritesClick) })

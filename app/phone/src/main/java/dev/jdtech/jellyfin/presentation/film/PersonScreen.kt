@@ -80,10 +80,10 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
     val safePadding = rememberSafePadding()
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
 
-    val paddingStart = safePadding.start + MaterialTheme.spacings.default
-    val paddingTop = safePadding.top + MaterialTheme.spacings.default
-    val paddingEnd = safePadding.end + MaterialTheme.spacings.default
-    val paddingBottom = safePadding.bottom + MaterialTheme.spacings.default
+    val paddingStart = safePadding.start + MaterialTheme.spacings.small
+    val paddingTop = safePadding.top + MaterialTheme.spacings.small
+    val paddingEnd = safePadding.end + MaterialTheme.spacings.small
+    val paddingBottom = safePadding.bottom + MaterialTheme.spacings.small
 
     val itemsPadding = PaddingValues(start = paddingStart, end = paddingEnd)
 
@@ -98,7 +98,7 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(itemsPadding),
                             horizontalArrangement =
-                                Arrangement.spacedBy(MaterialTheme.spacings.default),
+                                Arrangement.spacedBy(MaterialTheme.spacings.small),
                         ) {
                             PersonImage(person)
                             Column(
@@ -134,9 +134,9 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
                     }
                 }
 
-                Spacer(Modifier.height(MaterialTheme.spacings.default))
+                Spacer(Modifier.height(MaterialTheme.spacings.small))
 
-                Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default)) {
+                Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small)) {
                     if (state.starredInMovies.isNotEmpty()) {
                         Column {
                             Text(
@@ -148,7 +148,7 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
                             LazyRow(
                                 contentPadding = itemsPadding,
                                 horizontalArrangement =
-                                    Arrangement.spacedBy(MaterialTheme.spacings.default),
+                                    Arrangement.spacedBy(MaterialTheme.spacings.small),
                             ) {
                                 items(state.starredInMovies, key = { it.id }) { item ->
                                     ItemCard(
@@ -172,7 +172,7 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
                             LazyRow(
                                 contentPadding = itemsPadding,
                                 horizontalArrangement =
-                                    Arrangement.spacedBy(MaterialTheme.spacings.default),
+                                    Arrangement.spacedBy(MaterialTheme.spacings.small),
                             ) {
                                 items(state.starredInShows, key = { it.id }) { item ->
                                     ItemCard(

@@ -82,10 +82,10 @@ private fun HomeScreenLayout(state: HomeState, onAction: (HomeAction) -> Unit) {
     val scope = rememberCoroutineScope()
     val safePadding = rememberSafePadding(handleStartInsets = false)
 
-    val paddingStart = safePadding.start + MaterialTheme.spacings.default
+    val paddingStart = safePadding.start + MaterialTheme.spacings.small
     val paddingTop = safePadding.top + MaterialTheme.spacings.small
-    val paddingEnd = safePadding.end + MaterialTheme.spacings.default
-    val paddingBottom = safePadding.bottom + MaterialTheme.spacings.default
+    val paddingEnd = safePadding.end + MaterialTheme.spacings.small
+    val paddingBottom = safePadding.bottom + MaterialTheme.spacings.small
 
     val itemsPadding = PaddingValues(start = paddingStart, end = paddingEnd)
 

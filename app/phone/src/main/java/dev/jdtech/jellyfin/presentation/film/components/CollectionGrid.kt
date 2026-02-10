@@ -25,11 +25,11 @@ fun CollectionGrid(
     onAction: (CollectionAction) -> Unit,
 ) {
     LazyVerticalGrid(
-        columns = GridCellsAdaptiveWithMinColumns(minSize = 160.dp, minColumns = 2),
+        columns = GridCellsAdaptiveWithMinColumns(minSize = 110.dp, minColumns = 3),
         modifier = Modifier.padding(innerPadding).fillMaxSize(),
-        contentPadding = PaddingValues(all = MaterialTheme.spacings.default),
-        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
-        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
+        contentPadding = PaddingValues(all = MaterialTheme.spacings.small),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
     ) {
         sections.forEach { section ->
             stickyHeader {

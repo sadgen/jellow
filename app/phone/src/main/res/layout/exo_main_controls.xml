@@ -4,8 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/player_controls"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/player_background">
+    android:layout_height="match_parent">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
@@ -74,6 +73,21 @@
                 android:layout_weight="1" />
 
             <ImageButton
+                android:id="@+id/btn_orientation"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:background="@drawable/transparent_circle_background"
+                android:contentDescription="Toggle orientation"
+                android:padding="16dp"
+                android:src="@drawable/ic_screen_rotation"
+                app:tint="@android:color/white" />
+
+            <Space
+                android:layout_width="16dp"
+                android:layout_height="0dp" />
+
+            <ImageButton
                 android:id="@+id/btn_pip"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
@@ -135,6 +149,7 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <LinearLayout
+        android:id="@+id/playback_controls_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
@@ -194,6 +209,7 @@
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/progress_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"

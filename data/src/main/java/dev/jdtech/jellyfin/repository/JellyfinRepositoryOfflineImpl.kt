@@ -13,6 +13,7 @@ import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidSegment
 import dev.jdtech.jellyfin.models.FindroidShow
 import dev.jdtech.jellyfin.models.FindroidSource
+import dev.jdtech.jellyfin.models.FindroidTrickplayInfo
 import dev.jdtech.jellyfin.models.SortBy
 import dev.jdtech.jellyfin.models.SortOrder
 import dev.jdtech.jellyfin.models.toFindroidEpisode
@@ -222,6 +223,8 @@ class JellyfinRepositoryOfflineImpl(
 
     override suspend fun getSegments(itemId: UUID): List<FindroidSegment> =
         withContext(Dispatchers.IO) { database.getSegments(itemId).map { it.toFindroidSegment() } }
+
+    override suspend fun getTrickplayInfoForItem(itemId: UUID): FindroidTrickplayInfo? = null
 
     override suspend fun getTrickplayData(itemId: UUID, width: Int, index: Int): ByteArray? =
         withContext(Dispatchers.IO) {

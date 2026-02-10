@@ -22,6 +22,7 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.Space
 import android.widget.TextView
 import androidx.activity.viewModels
@@ -61,6 +62,7 @@ class PlayerActivity : BasePlayerActivity() {
     private var previewScrubListener: PreviewScrubListener? = null
     private var wasZoom: Boolean = false
     private var skipButtonTimeoutExpired: Boolean = true
+    private var forcePortrait: Boolean = false
 
     private lateinit var skipSegmentButton: Button
 
@@ -93,9 +95,14 @@ class PlayerActivity : BasePlayerActivity() {
         val itemId = UUID.fromString(intent.extras!!.getString("itemId"))
         val itemKind = intent.extras!!.getString("itemKind")
         val startFromBeginning = intent.extras!!.getBoolean("startFromBeginning")
+        forcePortrait = intent.extras!!.getBoolean("forcePortrait", false)
 
         binding = ActivityPlayerBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        if (forcePortrait) {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         binding.playerView.player = viewModel.player
@@ -297,8 +304,23 @@ class PlayerActivity : BasePlayerActivity() {
         unlockButton.setOnClickListener {
             exoPlayerControlView.visibility = View.VISIBLE
             lockedLayout.visibility = View.GONE
-            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            requestedOrientation = if (forcePortrait) {
+                ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            } else {
+                ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            }
             isControlsLocked = false
+        }
+
+        val orientationButton = binding.playerView.findViewById<ImageButton>(R.id.btn_orientation)
+        orientationButton.setOnClickListener {
+            forcePortrait = !forcePortrait
+            requestedOrientation = if (forcePortrait) {
+                ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            } else {
+                ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            }
+            applyPortraitUIAdjustments()
         }
 
         subtitleButton.setOnClickListener {
@@ -330,6 +352,46 @@ class PlayerActivity : BasePlayerActivity() {
             startFromBeginning = startFromBeginning,
         )
         hideSystemUI()
+        applyPortraitUIAdjustments()
+    }
+
+    private fun applyPortraitUIAdjustments() {
+        val progressContainer = binding.playerView.findViewById<LinearLayout>(R.id.progress_container) ?: return
+        val playbackControls = binding.playerView.findViewById<LinearLayout>(R.id.playback_controls_container) ?: return
+        val currentOrientation = resources.configuration.orientation
+        
+        val progressParams = progressContainer.layoutParams as FrameLayout.LayoutParams
+        val playbackParams = playbackControls.layoutParams as FrameLayout.LayoutParams
+        
+        if (currentOrientation == Configuration.ORIENTATION_PORTRAIT) {
+            // Portrait mode: Single-hand optimization for progress bar
+            progressParams.gravity = android.view.Gravity.BOTTOM or android.view.Gravity.END
+            progressParams.setMargins(0, 0, 16.dpToPx(), 120.dpToPx()) 
+            progressParams.width = (resources.displayMetrics.widthPixels * 0.65).toInt()
+            
+            // Move main playback controls lower to avoid overlaying video
+            playbackParams.gravity = android.view.Gravity.BOTTOM or android.view.Gravity.CENTER_HORIZONTAL
+            playbackParams.setMargins(0, 0, 0, 220.dpToPx()) // Positioned above progress bar but below typical video area
+        } else {
+            // Landscape mode: Normal layouts
+            progressParams.gravity = android.view.Gravity.BOTTOM
+            progressParams.setMargins(16.dpToPx(), 16.dpToPx(), 16.dpToPx(), 16.dpToPx())
+            progressParams.width = FrameLayout.LayoutParams.MATCH_PARENT
+            
+            playbackParams.gravity = android.view.Gravity.CENTER
+            playbackParams.setMargins(0, 0, 0, 0)
+        }
+        progressContainer.layoutParams = progressParams
+        playbackControls.layoutParams = playbackParams
+    }
+
+    private fun Int.dpToPx(): Int {
+        return (this * resources.displayMetrics.density).toInt()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        applyPortraitUIAdjustments()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -345,6 +407,7 @@ class PlayerActivity : BasePlayerActivity() {
             itemKind = itemKind ?: "",
             startFromBeginning = startFromBeginning,
         )
+        applyPortraitUIAdjustments()
     }
 
     override fun onUserLeaveHint() {

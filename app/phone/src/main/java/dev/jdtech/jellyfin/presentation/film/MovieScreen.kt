@@ -135,9 +135,9 @@ private fun MovieScreenLayout(
 ) {
     val safePadding = rememberSafePadding()
 
-    val paddingStart = safePadding.start + MaterialTheme.spacings.default
-    val paddingEnd = safePadding.end + MaterialTheme.spacings.default
-    val paddingBottom = safePadding.bottom + MaterialTheme.spacings.default
+    val paddingStart = safePadding.start + MaterialTheme.spacings.small
+    val paddingEnd = safePadding.end + MaterialTheme.spacings.small
+    val paddingBottom = safePadding.bottom + MaterialTheme.spacings.small
 
     val scrollState = rememberScrollState()
 

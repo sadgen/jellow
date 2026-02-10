@@ -154,17 +154,17 @@ fun FilmSearchBar(
         modifier = modifier.padding(start = searchBarPaddingStart, end = searchBarPaddingEnd),
     ) {
         LazyVerticalGrid(
-            columns = GridCellsAdaptiveWithMinColumns(minSize = 160.dp, minColumns = 2),
+            columns = GridCellsAdaptiveWithMinColumns(minSize = 110.dp, minColumns = 3),
             modifier = Modifier.fillMaxSize(),
             contentPadding =
                 PaddingValues(
-                    start = safePadding.start + MaterialTheme.spacings.default,
-                    top = MaterialTheme.spacings.default,
-                    end = safePadding.end + MaterialTheme.spacings.default,
-                    bottom = safePadding.bottom + MaterialTheme.spacings.default,
+                    start = safePadding.start + MaterialTheme.spacings.small,
+                    top = MaterialTheme.spacings.small,
+                    end = safePadding.end + MaterialTheme.spacings.small,
+                    bottom = safePadding.bottom + MaterialTheme.spacings.small,
                 ),
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
         ) {
             items(items = state.items, key = { it.id }) { item ->
                 ItemCard(

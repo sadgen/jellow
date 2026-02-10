@@ -1,5 +1,6 @@
 package dev.jdtech.jellyfin.presentation.film
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -29,6 +30,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
@@ -40,6 +42,8 @@ import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import dev.jdtech.jellyfin.core.R as CoreR
+import dev.jdtech.jellyfin.PlayerActivity
+import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyMovies
 import dev.jdtech.jellyfin.film.presentation.library.LibraryAction
 import dev.jdtech.jellyfin.film.presentation.library.LibraryState
@@ -58,6 +62,7 @@ import dev.jdtech.jellyfin.presentation.utils.plus
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import org.jellyfin.sdk.model.api.BaseItemKind
 
 @Composable
 fun LibraryScreen(
@@ -68,6 +73,7 @@ fun LibraryScreen(
     navigateBack: () -> Unit,
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
+    val context = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     var initialLoad by rememberSaveable { mutableStateOf(true) }
@@ -83,6 +89,7 @@ fun LibraryScreen(
     LibraryScreenLayout(
         libraryName = libraryName,
         state = state,
+        repository = viewModel.repository,
         onAction = { action ->
             when (action) {
                 is LibraryAction.OnItemClick -> onItemClick(action.item)
@@ -90,6 +97,19 @@ fun LibraryScreen(
                 else -> Unit
             }
             viewModel.onAction(action)
+        },
+        onPlayClick = { item ->
+            val itemKind = when (item) {
+                is dev.jdtech.jellyfin.models.FindroidMovie -> BaseItemKind.MOVIE.serialName
+                is dev.jdtech.jellyfin.models.FindroidEpisode -> BaseItemKind.EPISODE.serialName
+                else -> return@LibraryScreenLayout
+            }
+            val intent = Intent(context, PlayerActivity::class.java)
+            intent.putExtra("itemId", item.id.toString())
+            intent.putExtra("itemKind", itemKind)
+            intent.putExtra("startFromBeginning", false)
+            intent.putExtra("forcePortrait", true)
+            context.startActivity(intent)
         },
     )
 }
@@ -99,9 +119,11 @@ fun LibraryScreen(
 private fun LibraryScreenLayout(
     libraryName: String,
     state: LibraryState,
+    repository: JellyfinRepository? = null,
     onAction: (LibraryAction) -> Unit,
+    onPlayClick: ((FindroidItem) -> Unit)? = null,
 ) {
-    val contentPadding = PaddingValues(all = MaterialTheme.spacings.default)
+    val contentPadding = PaddingValues(all = MaterialTheme.spacings.small)
 
     val items = state.items.collectAsLazyPagingItems()
 
@@ -155,11 +177,11 @@ private fun LibraryScreenLayout(
                 modifier = Modifier.fillMaxWidth().padding(contentPadding + innerPadding),
             )
             LazyVerticalGrid(
-                columns = GridCellsAdaptiveWithMinColumns(minSize = 160.dp, minColumns = 2),
+                columns = GridCellsAdaptiveWithMinColumns(minSize = 110.dp, minColumns = 3),
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = contentPadding + innerPadding,
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
-                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
             ) {
                 items(count = items.itemCount, key = items.itemKey { it.id }) {
                     val item = items[it]
@@ -169,6 +191,8 @@ private fun LibraryScreenLayout(
                             direction = Direction.VERTICAL,
                             onClick = { onAction(LibraryAction.OnItemClick(item)) },
                             modifier = Modifier.animateItem(),
+                            repository = repository,
+                            onPlayClick = onPlayClick,
                         )
                     }
                 }
@@ -230,6 +254,7 @@ private fun LibraryScreenLayoutPreview() {
         LibraryScreenLayout(
             libraryName = "Movies",
             state = LibraryState(items = items),
+            repository = null,
             onAction = {},
         )
     }

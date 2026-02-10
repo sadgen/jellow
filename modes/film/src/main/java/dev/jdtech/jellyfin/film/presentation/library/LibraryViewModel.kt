@@ -24,6 +24,7 @@ constructor(
     private val jellyfinRepository: JellyfinRepository,
     private val appPreferences: AppPreferences,
 ) : ViewModel() {
+    val repository: JellyfinRepository get() = jellyfinRepository
     private val _state = MutableStateFlow(LibraryState())
     val state = _state.asStateFlow()
 
