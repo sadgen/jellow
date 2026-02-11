@@ -126,6 +126,18 @@ class PlayerActivity : BasePlayerActivity() {
         val itemId = UUID.fromString(intent.extras!!.getString("itemId"))
         val itemKind = intent.extras!!.getString("itemKind")
         val startFromBeginning = intent.extras!!.getBoolean("startFromBeginning")
+        val mediaSourceIndex =
+            if (intent.hasExtra("mediaSourceIndex")) {
+                intent.getIntExtra("mediaSourceIndex", 0)
+            } else {
+                null
+            }
+        val startItemIndex =
+            if (intent.hasExtra("startItemIndex")) {
+                intent.getIntExtra("startItemIndex", 0)
+            } else {
+                null
+            }
         forcePortrait = intent.extras!!.getBoolean("forcePortrait", false)
         val startInVr = intent.extras!!.getBoolean("startInVr", false)
 
@@ -420,6 +432,8 @@ class PlayerActivity : BasePlayerActivity() {
             itemId = itemId,
             itemKind = itemKind ?: "",
             startFromBeginning = startFromBeginning,
+            mediaSourceIndex = mediaSourceIndex,
+            startItemIndex = startItemIndex,
         )
         hideSystemUI()
         applyPortraitUIAdjustments()
@@ -664,10 +678,18 @@ class PlayerActivity : BasePlayerActivity() {
             viewModel.setVrMode(true, false)
         }
 
+        val startItemIndex =
+            if (intent.hasExtra("startItemIndex")) {
+                intent.getIntExtra("startItemIndex", 0)
+            } else {
+                null
+            }
+
         viewModel.initializePlayer(
             itemId = itemId,
             itemKind = itemKind ?: "",
             startFromBeginning = startFromBeginning,
+            startItemIndex = startItemIndex,
         )
         applyPortraitUIAdjustments()
     }

@@ -115,4 +115,7 @@
     <string name="player_vr_180_2d">180° 半球 (2D)</string>
     <string name="player_vr_180_3d_lr">180° 3D (左右)</string>
     <string name="player_vr_plane_2d">📺 平面影院</string>
+    <string name="parts">Parts</string>
+    <string name="versions">Versions</string>
+    <string name="part_number">Part %1$d</string>
 </resources>

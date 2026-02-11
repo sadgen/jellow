@@ -31,6 +31,7 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
         itemKind: BaseItemKind,
         mediaSourceIndex: Int? = null,
         startFromBeginning: Boolean = false,
+        startItemIndex: Int? = null,
     ): PlayerItem? {
         Timber.d("Retrieving initial player item")
 
@@ -38,8 +39,9 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
             when (itemKind) {
                 BaseItemKind.MOVIE -> {
                     val movie = repository.getMovie(itemId)
+                    val additionalParts = repository.getAdditionalParts(itemId)
 
-                    items = listOf(movie)
+                    items = listOf(movie) + additionalParts
                     movie
                 }
                 BaseItemKind.SERIES -> {
@@ -118,11 +120,12 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
 
         startItem = initialItem
 
-        currentItemIndex = items.indexOfFirst { it.id == initialItem.id }
+        currentItemIndex = startItemIndex ?: items.indexOfFirst { it.id == initialItem.id }
+        val actualStartItem = items[currentItemIndex]
 
         val playbackPosition =
-            if (!startFromBeginning) initialItem.playbackPositionTicks.div(10000) else 0
-        val playerItem = initialItem.toPlayerItem(mediaSourceIndex, playbackPosition)
+            if (!startFromBeginning) actualStartItem.playbackPositionTicks.div(10000) else 0
+        val playerItem = actualStartItem.toPlayerItem(mediaSourceIndex, playbackPosition)
         playerItems.add(playerItem)
 
         return playerItem
@@ -134,15 +137,16 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
         val itemIndex = currentItemIndex - 1
         val playerItem =
             when (startItem) {
-                is FindroidMovie -> null
+                is FindroidMovie,
                 is FindroidEpisode -> {
                     if (currentItemIndex == 0) {
                         null
                     } else {
                         val item = items[itemIndex]
-                        if (playerItems.firstOrNull { it.itemId == item.id } == null) {
+                        if (playerItems.firstOrNull { it.itemId == item.id && (item !is FindroidMovie || it.mediaSourceUri == null) } == null || (item is FindroidMovie && items.size > 1)) {
                             try {
-                                item.toPlayerItem(null, 0L)
+                                val sourceIndex = if (item is FindroidMovie && item.id == startItem?.id && items.size > 1) itemIndex else null
+                                item.toPlayerItem(sourceIndex, 0L)
                             } catch (e: Exception) {
                                 Timber.e("Failed to retrieve previous player item: $e")
                                 null
@@ -168,15 +172,16 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
         val itemIndex = currentItemIndex + 1
         val playerItem =
             when (startItem) {
-                is FindroidMovie -> null
+                is FindroidMovie,
                 is FindroidEpisode -> {
                     if (currentItemIndex == items.lastIndex) {
                         null
                     } else {
                         val item = items[itemIndex]
-                        if (playerItems.firstOrNull { it.itemId == item.id } == null) {
+                        if (playerItems.firstOrNull { it.itemId == item.id && (item !is FindroidMovie || it.mediaSourceUri == null) } == null || (item is FindroidMovie && items.size > 1)) {
                             try {
-                                item.toPlayerItem(null, 0L)
+                                val sourceIndex = if (item is FindroidMovie && item.id == startItem?.id && items.size > 1) itemIndex else null
+                                item.toPlayerItem(sourceIndex, 0L)
                             } catch (e: Exception) {
                                 Timber.e("Failed to retrieve next player item: $e")
                                 null

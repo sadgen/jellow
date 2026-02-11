@@ -393,6 +393,41 @@ class JellyfinRepositoryImpl(
             }
         }
 
+    override suspend fun getAdditionalParts(itemId: UUID): List<FindroidItem> =
+        withContext(Dispatchers.IO) {
+            try {
+                val videos =
+                    try {
+                        jellyfinApi.videosApi.getAdditionalPart(itemId, jellyfinApi.userId!!)
+                            .content
+                            .items
+                    } catch (e: Exception) {
+                        emptyList()
+                    }
+
+                val items =
+                    try {
+                        jellyfinApi.itemsApi.getItems(
+                            userId = jellyfinApi.userId!!,
+                            parentId = itemId
+                        ).content.items
+                    } catch (e: Exception) {
+                        emptyList()
+                    }
+
+                val combined = (videos + items).distinctBy { it.id }
+                Timber.d("GET_ADDITIONAL_PARTS: ID=$itemId. Found ${videos.size} videos, ${items.size} items.")
+                combined.forEach { Timber.d("PART: ${it.name} (${it.id}) - Type: ${it.type}") }
+
+                combined
+                    .sortedWith(compareBy({ it.indexNumber }, { it.name }))
+                    .mapNotNull { it.toFindroidItem(this@JellyfinRepositoryImpl, database) }
+            } catch (e: Exception) {
+                Timber.e(e)
+                emptyList()
+            }
+        }
+
     override suspend fun getSegments(itemId: UUID): List<FindroidSegment> =
         withContext(Dispatchers.IO) {
             val databaseSegments = database.getSegments(itemId).map { it.toFindroidSegment() }

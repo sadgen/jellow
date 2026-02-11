@@ -51,6 +51,7 @@ import dev.jdtech.jellyfin.presentation.film.components.InfoText
 import dev.jdtech.jellyfin.presentation.film.components.ItemButtonsBar
 import dev.jdtech.jellyfin.presentation.film.components.ItemHeader
 import dev.jdtech.jellyfin.presentation.film.components.ItemTopBar
+import dev.jdtech.jellyfin.presentation.film.components.MoviePartsRow
 import dev.jdtech.jellyfin.presentation.film.components.OverviewText
 import dev.jdtech.jellyfin.presentation.film.components.VideoMetadataBar
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
@@ -106,6 +107,7 @@ fun MovieScreen(
                     intent.putExtra("itemId", movieId.toString())
                     intent.putExtra("itemKind", BaseItemKind.MOVIE.serialName)
                     intent.putExtra("startFromBeginning", action.startFromBeginning)
+                    action.mediaSourceIndex?.let { intent.putExtra("mediaSourceIndex", it) }
                     context.startActivity(intent)
                 }
                 is MovieAction.PlayTrailer -> {
@@ -257,6 +259,29 @@ private fun MovieScreenLayout(
                         genres = movie.genres,
                         director = state.director,
                         writers = state.writers,
+                    )
+                    Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                }
+                if (state.additionalParts.isNotEmpty()) {
+                    MoviePartsRow(
+                        title = stringResource(CoreR.string.parts),
+                        parts = state.additionalParts.map { it.name },
+                        onPartClick = { index ->
+                            // Play the part. Index 0 is the main movie, index 1 is the first additional part.
+                            onAction(MovieAction.Play(startItemIndex = index + 1))
+                        },
+                        contentPadding = PaddingValues(start = paddingStart, end = paddingEnd),
+                    )
+                    Spacer(Modifier.height(MaterialTheme.spacings.medium))
+                }
+                if (state.mediaSources.size > 1) {
+                    MoviePartsRow(
+                        title = stringResource(CoreR.string.versions),
+                        parts = state.mediaSources.map { it.name },
+                        onPartClick = { index ->
+                            onAction(MovieAction.Play(mediaSourceIndex = index))
+                        },
+                        contentPadding = PaddingValues(start = paddingStart, end = paddingEnd),
                     )
                     Spacer(Modifier.height(MaterialTheme.spacings.medium))
                 }

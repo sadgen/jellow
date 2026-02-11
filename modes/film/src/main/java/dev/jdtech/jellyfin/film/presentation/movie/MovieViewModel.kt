@@ -35,6 +35,8 @@ constructor(
         viewModelScope.launch {
             try {
                 val movie = repository.getMovie(movieId)
+                val mediaSources = repository.getMediaSources(movieId, false)
+                val additionalParts = repository.getAdditionalParts(movieId)
                 val videoMetadata = videoMetadataParser.parse(movie.sources.first())
                 val actors = getActors(movie)
                 val director = getDirector(movie)
@@ -43,6 +45,8 @@ constructor(
                 _state.emit(
                     _state.value.copy(
                         movie = movie,
+                        mediaSources = mediaSources,
+                        additionalParts = additionalParts,
                         videoMetadata = videoMetadata,
                         actors = actors,
                         director = director,

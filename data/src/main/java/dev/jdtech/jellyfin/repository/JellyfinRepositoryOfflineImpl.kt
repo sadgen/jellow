@@ -219,9 +219,9 @@ class JellyfinRepositoryOfflineImpl(
             database.getSources(itemId).map { it.toFindroidSource(database) }
         }
 
-    override suspend fun getStreamUrl(itemId: UUID, mediaSourceId: String): String {
-        TODO("Not yet implemented")
-    }
+    override suspend fun getStreamUrl(itemId: UUID, mediaSourceId: String): String = ""
+
+    override suspend fun getAdditionalParts(itemId: UUID): List<FindroidItem> = emptyList()
 
     override suspend fun getSegments(itemId: UUID): List<FindroidSegment> =
         withContext(Dispatchers.IO) { database.getSegments(itemId).map { it.toFindroidSegment() } }

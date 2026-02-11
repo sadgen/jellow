@@ -1,0 +1,281 @@
+Type-safe project accessors is an incubating feature.
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :app:phone:preBuild UP-TO-DATE
+> Task :app:phone:preLibreDebugBuild UP-TO-DATE
+> Task :app:phone:mergeLibreDebugNativeDebugMetadata NO-SOURCE
+> Task :core:preBuild UP-TO-DATE
+> Task :core:preLibreDebugBuild UP-TO-DATE
+> Task :core:generateLibreDebugResValues UP-TO-DATE
+> Task :core:generateLibreDebugResources UP-TO-DATE
+> Task :core:packageLibreDebugResources UP-TO-DATE
+> Task :core:processLibreDebugNavigationResources UP-TO-DATE
+> Task :core:parseLibreDebugLocalResources UP-TO-DATE
+> Task :core:generateLibreDebugRFile UP-TO-DATE
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :data:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :data:preBuild UP-TO-DATE
+> Task :data:preDebugBuild UP-TO-DATE
+> Task :data:generateDebugBuildConfig UP-TO-DATE
+> Task :data:generateDebugResValues UP-TO-DATE
+> Task :data:generateDebugResources UP-TO-DATE
+> Task :data:packageDebugResources UP-TO-DATE
+> Task :data:processDebugNavigationResources UP-TO-DATE
+> Task :data:parseDebugLocalResources UP-TO-DATE
+> Task :data:generateDebugRFile UP-TO-DATE
+> Task :settings:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :settings:preBuild UP-TO-DATE
+> Task :settings:preDebugBuild UP-TO-DATE
+> Task :settings:generateDebugResValues UP-TO-DATE
+> Task :settings:generateDebugResources UP-TO-DATE
+> Task :settings:packageDebugResources UP-TO-DATE
+> Task :settings:processDebugNavigationResources UP-TO-DATE
+> Task :settings:parseDebugLocalResources UP-TO-DATE
+> Task :settings:generateDebugRFile UP-TO-DATE
+> Task :settings:kspDebugKotlin UP-TO-DATE
+> Task :settings:compileDebugKotlin UP-TO-DATE
+> Task :settings:javaPreCompileDebug UP-TO-DATE
+> Task :settings:compileDebugJavaWithJavac UP-TO-DATE
+> Task :settings:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :data:javaPreCompileDebug UP-TO-DATE
+> Task :player:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :player:core:preBuild UP-TO-DATE
+> Task :player:core:preDebugBuild UP-TO-DATE
+> Task :player:core:generateDebugResValues UP-TO-DATE
+> Task :player:core:generateDebugResources UP-TO-DATE
+> Task :player:core:packageDebugResources UP-TO-DATE
+> Task :player:core:processDebugNavigationResources UP-TO-DATE
+> Task :player:core:parseDebugLocalResources UP-TO-DATE
+> Task :player:core:generateDebugRFile UP-TO-DATE
+> Task :player:core:compileDebugKotlin UP-TO-DATE
+> Task :player:core:javaPreCompileDebug UP-TO-DATE
+> Task :player:core:compileDebugJavaWithJavac NO-SOURCE
+> Task :player:core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:javaPreCompileLibreDebug UP-TO-DATE
+> Task :settings:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :player:core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :setup:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :setup:preBuild UP-TO-DATE
+> Task :setup:preDebugBuild UP-TO-DATE
+> Task :setup:generateDebugResValues UP-TO-DATE
+> Task :setup:generateDebugResources UP-TO-DATE
+> Task :setup:packageDebugResources UP-TO-DATE
+> Task :setup:processDebugNavigationResources UP-TO-DATE
+> Task :setup:parseDebugLocalResources UP-TO-DATE
+> Task :setup:generateDebugRFile UP-TO-DATE
+> Task :setup:javaPreCompileDebug UP-TO-DATE
+> Task :app:phone:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:phone:dataBindingMergeDependencyArtifactsLibreDebug UP-TO-DATE
+> Task :app:phone:generateLibreDebugResValues UP-TO-DATE
+> Task :app:phone:generateLibreDebugResources UP-TO-DATE
+> Task :app:phone:prepareLibraryDefinitionsLibreDebug UP-TO-DATE
+> Task :modes:film:preBuild UP-TO-DATE
+> Task :modes:film:preDebugBuild UP-TO-DATE
+> Task :modes:film:generateDebugResValues UP-TO-DATE
+> Task :modes:film:generateDebugResources UP-TO-DATE
+> Task :modes:film:packageDebugResources UP-TO-DATE
+> Task :player:local:preBuild UP-TO-DATE
+> Task :player:local:preDebugBuild UP-TO-DATE
+> Task :player:local:generateDebugResValues UP-TO-DATE
+> Task :player:local:generateDebugResources UP-TO-DATE
+> Task :player:local:packageDebugResources UP-TO-DATE
+> Task :app:phone:mergeLibreDebugResources UP-TO-DATE
+> Task :app:phone:packageLibreDebugResources UP-TO-DATE
+> Task :modes:film:processDebugNavigationResources UP-TO-DATE
+> Task :player:local:processDebugNavigationResources UP-TO-DATE
+> Task :app:phone:processLibreDebugNavigationResources UP-TO-DATE
+> Task :app:phone:parseLibreDebugLocalResources UP-TO-DATE
+> Task :modes:film:parseDebugLocalResources UP-TO-DATE
+> Task :modes:film:generateDebugRFile UP-TO-DATE
+> Task :player:local:parseDebugLocalResources UP-TO-DATE
+> Task :player:local:generateDebugRFile UP-TO-DATE
+> Task :app:phone:dataBindingGenBaseClassesLibreDebug UP-TO-DATE
+> Task :app:phone:generateLibreDebugBuildConfig UP-TO-DATE
+> Task :core:compileLibreDebugLibraryResources UP-TO-DATE
+> Task :data:compileDebugLibraryResources UP-TO-DATE
+> Task :settings:compileDebugLibraryResources UP-TO-DATE
+> Task :setup:compileDebugLibraryResources UP-TO-DATE
+> Task :core:writeLibreDebugAarMetadata UP-TO-DATE
+> Task :data:writeDebugAarMetadata UP-TO-DATE
+> Task :settings:writeDebugAarMetadata UP-TO-DATE
+> Task :setup:writeDebugAarMetadata UP-TO-DATE
+> Task :modes:film:writeDebugAarMetadata UP-TO-DATE
+> Task :player:core:writeDebugAarMetadata UP-TO-DATE
+> Task :player:local:writeDebugAarMetadata UP-TO-DATE
+> Task :app:phone:checkLibreDebugAarMetadata UP-TO-DATE
+> Task :app:phone:compileLibreDebugNavigationResources UP-TO-DATE
+> Task :app:phone:mapLibreDebugSourceSetPaths UP-TO-DATE
+> Task :app:phone:createLibreDebugCompatibleScreenManifests UP-TO-DATE
+> Task :core:extractDeepLinksLibreDebug UP-TO-DATE
+> Task :core:processLibreDebugManifest UP-TO-DATE
+> Task :data:extractDeepLinksDebug UP-TO-DATE
+> Task :data:processDebugManifest UP-TO-DATE
+> Task :settings:extractDeepLinksDebug UP-TO-DATE
+> Task :settings:processDebugManifest UP-TO-DATE
+> Task :setup:extractDeepLinksDebug UP-TO-DATE
+> Task :setup:processDebugManifest UP-TO-DATE
+> Task :app:phone:extractDeepLinksLibreDebug UP-TO-DATE
+> Task :modes:film:extractDeepLinksDebug UP-TO-DATE
+> Task :modes:film:processDebugManifest UP-TO-DATE
+> Task :player:core:extractDeepLinksDebug UP-TO-DATE
+> Task :player:core:processDebugManifest UP-TO-DATE
+> Task :player:local:extractDeepLinksDebug UP-TO-DATE
+> Task :player:local:processDebugManifest UP-TO-DATE
+> Task :app:phone:processLibreDebugMainManifest UP-TO-DATE
+> Task :app:phone:processLibreDebugManifest UP-TO-DATE
+> Task :app:phone:processLibreDebugManifestForPackage UP-TO-DATE
+> Task :modes:film:compileDebugLibraryResources UP-TO-DATE
+> Task :player:core:compileDebugLibraryResources UP-TO-DATE
+> Task :player:local:compileDebugLibraryResources UP-TO-DATE
+> Task :app:phone:processLibreDebugResources UP-TO-DATE
+> Task :modes:film:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :modes:film:javaPreCompileDebug UP-TO-DATE
+> Task :player:local:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :player:local:javaPreCompileDebug UP-TO-DATE
+> Task :app:phone:javaPreCompileLibreDebug UP-TO-DATE
+> Task :core:mergeLibreDebugShaders UP-TO-DATE
+> Task :core:compileLibreDebugShaders NO-SOURCE
+> Task :core:generateLibreDebugAssets UP-TO-DATE
+> Task :core:mergeLibreDebugAssets UP-TO-DATE
+> Task :data:mergeDebugShaders UP-TO-DATE
+> Task :data:compileDebugShaders NO-SOURCE
+> Task :data:generateDebugAssets UP-TO-DATE
+> Task :data:mergeDebugAssets UP-TO-DATE
+> Task :settings:mergeDebugShaders UP-TO-DATE
+> Task :settings:compileDebugShaders NO-SOURCE
+> Task :settings:generateDebugAssets UP-TO-DATE
+> Task :settings:mergeDebugAssets UP-TO-DATE
+> Task :setup:mergeDebugShaders UP-TO-DATE
+> Task :setup:compileDebugShaders NO-SOURCE
+> Task :setup:generateDebugAssets UP-TO-DATE
+> Task :setup:mergeDebugAssets UP-TO-DATE
+> Task :app:phone:mergeLibreDebugShaders UP-TO-DATE
+> Task :app:phone:compileLibreDebugShaders NO-SOURCE
+> Task :app:phone:generateLibreDebugAssets UP-TO-DATE
+> Task :modes:film:mergeDebugShaders UP-TO-DATE
+> Task :modes:film:compileDebugShaders NO-SOURCE
+> Task :modes:film:generateDebugAssets UP-TO-DATE
+> Task :modes:film:mergeDebugAssets UP-TO-DATE
+> Task :player:core:mergeDebugShaders UP-TO-DATE
+> Task :player:core:compileDebugShaders NO-SOURCE
+> Task :player:core:generateDebugAssets UP-TO-DATE
+> Task :player:core:mergeDebugAssets UP-TO-DATE
+> Task :player:local:mergeDebugShaders UP-TO-DATE
+> Task :player:local:compileDebugShaders NO-SOURCE
+> Task :player:local:generateDebugAssets UP-TO-DATE
+> Task :player:local:mergeDebugAssets UP-TO-DATE
+> Task :app:phone:mergeLibreDebugAssets UP-TO-DATE
+> Task :app:phone:compressLibreDebugAssets UP-TO-DATE
+> Task :app:phone:l8DexDesugarLibLibreDebug UP-TO-DATE
+> Task :app:phone:checkLibreDebugDuplicateClasses UP-TO-DATE
+> Task :app:phone:desugarLibreDebugFileDependencies UP-TO-DATE
+> Task :app:phone:mergeExtDexLibreDebug UP-TO-DATE
+> Task :player:core:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :settings:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :player:core:processDebugJavaRes UP-TO-DATE
+> Task :player:core:createFullJarDebug UP-TO-DATE
+> Task :settings:processDebugJavaRes UP-TO-DATE
+> Task :settings:createFullJarDebug UP-TO-DATE
+> Task :core:mergeLibreDebugJniLibFolders UP-TO-DATE
+> Task :core:mergeLibreDebugNativeLibs NO-SOURCE
+> Task :core:copyLibreDebugJniLibsProjectOnly UP-TO-DATE
+> Task :data:mergeDebugJniLibFolders UP-TO-DATE
+> Task :data:mergeDebugNativeLibs NO-SOURCE
+> Task :data:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :settings:mergeDebugJniLibFolders UP-TO-DATE
+> Task :settings:mergeDebugNativeLibs NO-SOURCE
+> Task :settings:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :setup:mergeDebugJniLibFolders UP-TO-DATE
+> Task :setup:mergeDebugNativeLibs NO-SOURCE
+> Task :setup:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :app:phone:mergeLibreDebugJniLibFolders UP-TO-DATE
+> Task :modes:film:mergeDebugJniLibFolders UP-TO-DATE
+> Task :modes:film:mergeDebugNativeLibs NO-SOURCE
+> Task :modes:film:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :player:core:mergeDebugJniLibFolders UP-TO-DATE
+> Task :player:core:mergeDebugNativeLibs NO-SOURCE
+> Task :player:core:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :player:local:mergeDebugJniLibFolders UP-TO-DATE
+> Task :player:local:mergeDebugNativeLibs NO-SOURCE
+> Task :player:local:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :app:phone:mergeLibreDebugNativeLibs UP-TO-DATE
+> Task :app:phone:stripLibreDebugDebugSymbols UP-TO-DATE
+> Task :app:phone:validateSigningLibreDebug UP-TO-DATE
+> Task :app:phone:writeLibreDebugAppMetadata UP-TO-DATE
+> Task :app:phone:writeLibreDebugSigningConfigVersions UP-TO-DATE
+> Task :data:kspDebugKotlin
+> Task :data:compileDebugKotlin
+> Task :data:compileDebugJavaWithJavac UP-TO-DATE
+> Task :data:processDebugJavaRes UP-TO-DATE
+> Task :data:bundleLibRuntimeToJarDebug
+> Task :data:bundleLibCompileToJarDebug
+> Task :data:bundleLibRuntimeToDirDebug
+> Task :data:createFullJarDebug
+> Task :core:kspLibreDebugKotlin
+> Task :player:local:kspDebugKotlin
+> Task :core:compileLibreDebugKotlin UP-TO-DATE
+> Task :core:compileLibreDebugJavaWithJavac
+> Task :player:local:compileDebugKotlin UP-TO-DATE
+> Task :player:local:compileDebugJavaWithJavac UP-TO-DATE
+> Task :core:processLibreDebugJavaRes UP-TO-DATE
+> Task :player:local:processDebugJavaRes UP-TO-DATE
+> Task :core:transformLibreDebugClassesWithAsm
+> Task :core:bundleLibCompileToJarLibreDebug UP-TO-DATE
+> Task :player:local:transformDebugClassesWithAsm
+> Task :player:local:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:bundleLibRuntimeToDirLibreDebug UP-TO-DATE
+> Task :player:local:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :core:bundleLibRuntimeToJarLibreDebug UP-TO-DATE
+> Task :player:local:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:createFullJarLibreDebug UP-TO-DATE
+> Task :player:local:createFullJarDebug UP-TO-DATE
+> Task :setup:kspDebugKotlin
+> Task :setup:compileDebugKotlin UP-TO-DATE
+> Task :setup:compileDebugJavaWithJavac UP-TO-DATE
+> Task :setup:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :setup:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :setup:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :setup:processDebugJavaRes UP-TO-DATE
+> Task :setup:createFullJarDebug UP-TO-DATE
+> Task :modes:film:kspDebugKotlin
+> Task :modes:film:compileDebugKotlin UP-TO-DATE
+> Task :modes:film:compileDebugJavaWithJavac UP-TO-DATE
+> Task :modes:film:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :modes:film:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :modes:film:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :modes:film:processDebugJavaRes UP-TO-DATE
+> Task :modes:film:createFullJarDebug UP-TO-DATE
+> Task :app:phone:mergeLibDexLibreDebug
+> Task :app:phone:kspLibreDebugKotlin
+> Task :app:phone:compileLibreDebugKotlin UP-TO-DATE
+> Task :app:phone:compileLibreDebugJavaWithJavac UP-TO-DATE
+> Task :app:phone:hiltAggregateDepsLibreDebug UP-TO-DATE
+> Task :app:phone:hiltJavaCompileLibreDebug
+> Task :app:phone:processLibreDebugJavaRes UP-TO-DATE
+> Task :app:phone:mergeLibreDebugJavaResource UP-TO-DATE
+> Task :app:phone:transformLibreDebugClassesWithAsm
+> Task :app:phone:dexBuilderLibreDebug UP-TO-DATE
+> Task :app:phone:mergeLibreDebugGlobalSynthetics UP-TO-DATE
+> Task :app:phone:mergeProjectDexLibreDebug UP-TO-DATE
+> Task :app:phone:packageLibreDebug
+> Task :app:phone:createLibreDebugApkListingFileRedirect UP-TO-DATE
+> Task :app:phone:assembleLibreDebug
+> Task :app:phone:assembleDebug
+
+[Incubating] Problems report is available at: file:///home/sadgen/Documents/findroid/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.2.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 11s
+212 actionable tasks: 18 executed, 194 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.2.1/userguide/configuration_cache_enabling.html
