@@ -16,6 +16,7 @@ import android.os.Looper
 import android.os.Process
 import android.util.Rational
 import android.view.SurfaceView
+import android.view.TextureView
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
@@ -122,6 +123,30 @@ class PlayerActivity : BasePlayerActivity() {
             binding.sphericalView.onResume()
         }
         gyroController.start()
+
+        // Surface Fix & Hybrid Mode Logic
+        if (::binding.isInitialized && !viewModel.playerVrMode.value) {
+            val player = viewModel.player
+            
+            // Check if we need to switch to TextureView (for ExoPlayer to support panning/clipping)
+            // or if we should stay on SurfaceView (for MPV to avoid crash).
+            // Note: We can only "switch" effectively by what we call on the player, 
+            // but the View itself is determined by XML (SurfaceView by default now).
+            
+            val surfaceView = binding.playerView.videoSurfaceView
+            
+            // If the XML provided a SurfaceView (default), use it.
+            if (surfaceView is SurfaceView) {
+                 // For MPV, this is safe and correct.
+                 // For ExoPlayer, it means clipping fix is disabled, but at least it works.
+                 // Ideally we'd swap the view, but PlayerView is rigid.
+                 player.setVideoSurfaceView(surfaceView)
+            } else if (surfaceView is TextureView) {
+                 // If for some reason we have a TextureView (e.g. modified XML), use it.
+                 // MPV might crash here, but ExoPlayer loves it.
+                 player.setVideoTextureView(surfaceView)
+            }
+        }
     }
 
     override fun onPause() {
@@ -658,10 +683,10 @@ class PlayerActivity : BasePlayerActivity() {
             val surfaceView = binding.playerView.videoSurfaceView
             if (surfaceView is SurfaceView) {
                  viewModel.player.setVideoSurfaceView(surfaceView)
+            } else if (surfaceView is TextureView) {
+                 viewModel.player.setVideoTextureView(surfaceView)
             } else {
-                 // Fallback if null or not surface view, clear it to let PlayerView handle generic surface logic
                  viewModel.player.clearVideoSurface()
-                 viewModel.player.setVideoSurfaceView(surfaceView as? SurfaceView)
             }
             
             btnVr.clearColorFilter()
@@ -764,9 +789,12 @@ class PlayerActivity : BasePlayerActivity() {
 
     private fun finishPlayback() {
         try {
-            viewModel.player.clearVideoSurfaceView(
-                binding.playerView.videoSurfaceView as SurfaceView
-            )
+            val surfaceView = binding.playerView.videoSurfaceView
+            if (surfaceView is SurfaceView) {
+                viewModel.player.clearVideoSurfaceView(surfaceView)
+            } else if (surfaceView is TextureView) {
+                viewModel.player.clearVideoTextureView(surfaceView)
+            }
         } catch (e: Exception) {
             Timber.e(e)
         }
@@ -874,22 +902,29 @@ class PlayerActivity : BasePlayerActivity() {
         }
     }
 
+
     private inner class StandardVideoGyroController : SensorEventListener {
         private val sensorManager by lazy { getSystemService(Context.SENSOR_SERVICE) as SensorManager }
         private val gyroscope by lazy { sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE) }
         private var isEnabled = false
         private var isListening = false
         
-        // Limits for translation
+        // For view-based panning (ExoPlayer)
         private var maxTransX = 0f
         private var maxTransY = 0f
+        
+        // For MPV-native panning
+        private val isMpv: Boolean get() = appPreferences.getValue(appPreferences.playerMpv)
+        private var mpvPanX = 0.0
+        private var mpvPanY = 0.0
+        private var maxMpvPanX = 0.0
+        private var maxMpvPanY = 0.0
         
         fun setEnabled(enabled: Boolean) {
             if (isEnabled != enabled) {
                 isEnabled = enabled
-                // Reset translation when disabling
                 if (!enabled) {
-                    resetTranslation()
+                    resetPanning()
                 }
                 updateListeningState()
             }
@@ -917,36 +952,77 @@ class PlayerActivity : BasePlayerActivity() {
             }
         }
         
-        private fun resetTranslation() {
-            binding.playerView.videoSurfaceView?.animate()
-                ?.translationX(0f)
-                ?.translationY(0f)
-                ?.setDuration(0)
-                ?.start()
+        private fun resetPanning() {
+            if (isMpv) {
+                mpvPanX = 0.0
+                mpvPanY = 0.0
+                try {
+                    dev.jdtech.mpv.MPVLib.setPropertyDouble("video-pan-x", 0.0)
+                    dev.jdtech.mpv.MPVLib.setPropertyDouble("video-pan-y", 0.0)
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to reset MPV pan")
+                }
+            } else {
+                binding.playerView.videoSurfaceView?.animate()
+                    ?.translationX(0f)
+                    ?.translationY(0f)
+                    ?.setDuration(0)
+                    ?.start()
+            }
         }
 
         override fun onSensorChanged(event: SensorEvent?) {
             if (event == null || !isEnabled) return
             
-            val surfaceView = binding.playerView.videoSurfaceView ?: return
-            
-            // Calculate limits based on current dimensions
             calculateLimits()
             
-            // If limits are 0, it means we fit on screen, no need to pan
-            if (maxTransX <= 0 && maxTransY <= 0) return
+            if (isMpv) {
+                handleMpvPanning(event)
+            } else {
+                handleViewPanning(event)
+            }
+        }
+        
+        private fun handleMpvPanning(event: SensorEvent) {
+            if (maxMpvPanX <= 0 && maxMpvPanY <= 0) return
             
-            // Adjust for orientation
-            // Standard landscape: Y rotation (roll) -> moves X
-            // X rotation (pitch) -> moves Y
+            // MPV video-pan-x/y are in fractions of the video size 
+            // (0.0 = center, positive = shift right/down)
+            val sensitivity = 0.005
+            val config = resources.configuration
+            
+            var deltaX: Double
+            var deltaY: Double
+            
+            if (config.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                deltaX = -event.values[1].toDouble() * sensitivity
+                deltaY = -event.values[0].toDouble() * sensitivity
+            } else {
+                deltaX = -event.values[1].toDouble() * sensitivity
+                deltaY = -event.values[0].toDouble() * sensitivity
+            }
+            
+            mpvPanX += deltaX
+            mpvPanY += deltaY
+            
+            // Clamp
+            mpvPanX = max(-maxMpvPanX, min(mpvPanX, maxMpvPanX))
+            mpvPanY = max(-maxMpvPanY, min(mpvPanY, maxMpvPanY))
+            
+            try {
+                dev.jdtech.mpv.MPVLib.setPropertyDouble("video-pan-x", mpvPanX)
+                dev.jdtech.mpv.MPVLib.setPropertyDouble("video-pan-y", mpvPanY)
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to set MPV pan")
+            }
+        }
+        
+        private fun handleViewPanning(event: SensorEvent) {
+            val surfaceView = binding.playerView.videoSurfaceView ?: return
+            if (maxTransX <= 0 && maxTransY <= 0) return
             
             val sensitivity = 50f
             val config = resources.configuration
-            
-            // In landscape, tilting phone left/right (positive/negative Y) should move content right/left
-            // If I tilt Right (screen right side go down), Y rot is positive?
-            // If surface moves LEFT (negative X), I see right content.
-            // So: +Y rot -> -X trans.
             
             var deltaX = 0f
             var deltaY = 0f
@@ -955,7 +1031,6 @@ class PlayerActivity : BasePlayerActivity() {
                 deltaX = -event.values[1] * sensitivity 
                 deltaY = -event.values[0] * sensitivity
             } else {
-                // Portrait
                 deltaX = -event.values[1] * sensitivity 
                 deltaY = -event.values[0] * sensitivity
             }
@@ -963,7 +1038,6 @@ class PlayerActivity : BasePlayerActivity() {
             var newTransX = surfaceView.translationX + deltaX
             var newTransY = surfaceView.translationY + deltaY
             
-            // Clamp
             newTransX = max(-maxTransX, min(newTransX, maxTransX))
             newTransY = max(-maxTransY, min(newTransY, maxTransY))
             
@@ -983,7 +1057,6 @@ class PlayerActivity : BasePlayerActivity() {
             val viewHeight = binding.playerView.height.toFloat()
             if (viewWidth <= 0 || viewHeight <= 0) return
             
-            // When RESIZE_MODE_ZOOM is active, the content fills the view.
             val scaleX = viewWidth / videoSize.width
             val scaleY = viewHeight / videoSize.height
             val scale = max(scaleX, scaleY)
@@ -991,11 +1064,21 @@ class PlayerActivity : BasePlayerActivity() {
             val renderedWidth = videoSize.width * scale
             val renderedHeight = videoSize.height * scale
             
+            // View-based limits (pixels)
             maxTransX = (renderedWidth - viewWidth) / 2f
             maxTransY = (renderedHeight - viewHeight) / 2f
-            
             if (maxTransX < 1f) maxTransX = 0f
             if (maxTransY < 1f) maxTransY = 0f
+            
+            // MPV-native limits (fraction of video size)
+            // video-pan-x of 1.0 shifts the video by its full width
+            // We want to shift by at most half the overflow, normalized to video size
+            maxMpvPanX = if (renderedWidth > viewWidth) {
+                ((renderedWidth - viewWidth) / 2.0) / renderedWidth.toDouble()
+            } else 0.0
+            maxMpvPanY = if (renderedHeight > viewHeight) {
+                ((renderedHeight - viewHeight) / 2.0) / renderedHeight.toDouble()
+            } else 0.0
         }
     }
 }

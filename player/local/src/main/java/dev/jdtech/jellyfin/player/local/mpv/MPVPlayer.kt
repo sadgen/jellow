@@ -6,6 +6,7 @@ import android.content.res.AssetManager
 import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
+import android.graphics.SurfaceTexture
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
@@ -1208,7 +1209,11 @@ class MPVPlayer(
      * player.
      */
     override fun clearVideoSurface() {
-        TODO("Not yet implemented")
+        MPVLib.setOptionString("vo", "null")
+        MPVLib.setOptionString("force-window", "no")
+        MPVLib.detachSurface()
+        textureViewSurface?.release()
+        textureViewSurface = null
     }
 
     /**
@@ -1294,7 +1299,7 @@ class MPVPlayer(
      * @param textureView The texture view to clear.
      */
     override fun clearVideoTextureView(textureView: TextureView?) {
-        TODO("Not yet implemented")
+        textureView?.surfaceTextureListener = null
     }
 
     /**
@@ -1482,6 +1487,61 @@ class MPVPlayer(
                 MPVLib.setOptionString("force-window", "no")
                 MPVLib.detachSurface()
             }
+        }
+
+    private var textureViewSurface: Surface? = null
+    private var currentSurfaceTexture: SurfaceTexture? = null
+
+    private val surfaceTextureListener: TextureView.SurfaceTextureListener =
+        object : TextureView.SurfaceTextureListener {
+            override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
+                Timber.d("MPV: onSurfaceTextureAvailable ${width}x${height}")
+                if (currentSurfaceTexture == surface) {
+                    Timber.d("MPV: SurfaceTexture already attached, updating size")
+                    MPVLib.setPropertyString("android-surface-size", "${width}x$height")
+                    return
+                }
+
+                if (textureViewSurface != null) {
+                    try {
+                        MPVLib.detachSurface()
+                    } catch (e: Exception) {
+                        Timber.e(e, "MPV: Failed to detach old surface")
+                    }
+                    textureViewSurface?.release()
+                    textureViewSurface = null
+                }
+                
+                currentSurfaceTexture = surface
+                val s = Surface(surface)
+                textureViewSurface = s
+                MPVLib.attachSurface(s)
+                // Set default options
+                MPVLib.setOptionString("force-window", "yes")
+                MPVLib.setOptionString("vo", videoOutput)
+                MPVLib.setPropertyString("android-surface-size", "${width}x$height")
+            }
+
+            override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
+                MPVLib.setPropertyString("android-surface-size", "${width}x$height")
+            }
+
+            override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
+                Timber.d("MPV: onSurfaceTextureDestroyed")
+                try {
+                    MPVLib.setOptionString("vo", "null")
+                    MPVLib.setOptionString("force-window", "no")
+                    MPVLib.detachSurface()
+                } catch (e: Exception) {
+                    Timber.e(e, "MPV: Error destroying surface")
+                }
+                textureViewSurface?.release()
+                textureViewSurface = null
+                currentSurfaceTexture = null
+                return true
+            }
+
+            override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
         }
 
     companion object {
