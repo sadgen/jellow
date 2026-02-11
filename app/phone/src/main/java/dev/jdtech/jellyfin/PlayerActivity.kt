@@ -56,6 +56,14 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
+
 var isControlsLocked: Boolean = false
 
 @AndroidEntryPoint
@@ -82,6 +90,8 @@ class PlayerActivity : BasePlayerActivity() {
     private var vrSteeringCurrentY = 0f
     private val VR_STEERING_SENSITIVITY = 2.0f
     private var originalTouchListener: View.OnTouchListener? = null
+    
+    private val gyroController by lazy { StandardVideoGyroController() }
 
     private val isPipSupported by lazy {
         // Check if device has PiP feature
@@ -111,6 +121,7 @@ class PlayerActivity : BasePlayerActivity() {
         if (::binding.isInitialized && binding.sphericalView.isVisible) {
             binding.sphericalView.onResume()
         }
+        gyroController.start()
     }
 
     override fun onPause() {
@@ -118,6 +129,7 @@ class PlayerActivity : BasePlayerActivity() {
         if (::binding.isInitialized && binding.sphericalView.isVisible) {
             binding.sphericalView.onPause()
         }
+        gyroController.stop()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -178,6 +190,9 @@ class PlayerActivity : BasePlayerActivity() {
                     binding.playerView,
                     getSystemService(AUDIO_SERVICE) as AudioManager,
                 )
+            playerGestureHelper?.onZoomStateChanged = { enabled ->
+                gyroController.setEnabled(enabled)
+            }
         }
 
         binding.playerView.findViewById<View>(R.id.back_button).setOnClickListener {
@@ -847,6 +862,131 @@ class PlayerActivity : BasePlayerActivity() {
                         }
                 }
             }
+        }
+    }
+
+    private inner class StandardVideoGyroController : SensorEventListener {
+        private val sensorManager by lazy { getSystemService(Context.SENSOR_SERVICE) as SensorManager }
+        private val gyroscope by lazy { sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE) }
+        private var isEnabled = false
+        private var isListening = false
+        
+        // Limits for translation
+        private var maxTransX = 0f
+        private var maxTransY = 0f
+        
+        fun setEnabled(enabled: Boolean) {
+            if (isEnabled != enabled) {
+                isEnabled = enabled
+                // Reset translation when disabling
+                if (!enabled) {
+                    resetTranslation()
+                }
+                updateListeningState()
+            }
+        }
+        
+        fun start() {
+            updateListeningState()
+        }
+        
+        fun stop() {
+            if (isListening) {
+                sensorManager.unregisterListener(this)
+                isListening = false
+            }
+        }
+        
+        private fun updateListeningState() {
+            if (isEnabled && !isListening) {
+                gyroscope?.let {
+                    sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
+                    isListening = true
+                }
+            } else if (!isEnabled && isListening) {
+                stop()
+            }
+        }
+        
+        private fun resetTranslation() {
+            binding.playerView.videoSurfaceView?.animate()
+                ?.translationX(0f)
+                ?.translationY(0f)
+                ?.setDuration(300)
+                ?.start()
+        }
+
+        override fun onSensorChanged(event: SensorEvent?) {
+            if (event == null || !isEnabled) return
+            
+            val surfaceView = binding.playerView.videoSurfaceView ?: return
+            
+            // Calculate limits based on current dimensions
+            calculateLimits()
+            
+            // If limits are 0, it means we fit on screen, no need to pan
+            if (maxTransX <= 0 && maxTransY <= 0) return
+            
+            // Adjust for orientation
+            // Standard landscape: Y rotation (roll) -> moves X
+            // X rotation (pitch) -> moves Y
+            
+            val sensitivity = 50f
+            val config = resources.configuration
+            
+            // In landscape, tilting phone left/right (positive/negative Y) should move content right/left
+            // If I tilt Right (screen right side go down), Y rot is positive?
+            // If surface moves LEFT (negative X), I see right content.
+            // So: +Y rot -> -X trans.
+            
+            var deltaX = 0f
+            var deltaY = 0f
+            
+            if (config.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                deltaX = -event.values[1] * sensitivity 
+                deltaY = -event.values[0] * sensitivity
+            } else {
+                // Portrait
+                deltaX = -event.values[1] * sensitivity 
+                deltaY = -event.values[0] * sensitivity
+            }
+            
+            var newTransX = surfaceView.translationX + deltaX
+            var newTransY = surfaceView.translationY + deltaY
+            
+            // Clamp
+            newTransX = max(-maxTransX, min(newTransX, maxTransX))
+            newTransY = max(-maxTransY, min(newTransY, maxTransY))
+            
+            surfaceView.translationX = newTransX
+            surfaceView.translationY = newTransY
+        }
+
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+            // No-op
+        }
+        
+        private fun calculateLimits() {
+            val videoSize = binding.playerView.player?.videoSize ?: return
+            if (videoSize.width <= 0 || videoSize.height <= 0) return
+            
+            val viewWidth = binding.playerView.width.toFloat()
+            val viewHeight = binding.playerView.height.toFloat()
+            if (viewWidth <= 0 || viewHeight <= 0) return
+            
+            // When RESIZE_MODE_ZOOM is active, the content fills the view.
+            val scaleX = viewWidth / videoSize.width
+            val scaleY = viewHeight / videoSize.height
+            val scale = max(scaleX, scaleY)
+            
+            val renderedWidth = videoSize.width * scale
+            val renderedHeight = videoSize.height * scale
+            
+            maxTransX = (renderedWidth - viewWidth) / 2f
+            maxTransY = (renderedHeight - viewHeight) / 2f
+            
+            if (maxTransX < 1f) maxTransX = 0f
+            if (maxTransY < 1f) maxTransY = 0f
         }
     }
 }

@@ -42,6 +42,7 @@ class PlayerGestureHelper(
     private val audioManager: AudioManager,
 ) {
     var vrInterceptListener: ((MotionEvent) -> Boolean)? = null
+    var onZoomStateChanged: ((Boolean) -> Unit)? = null
     /**
      * Tracks whether video content should fill the screen, cutting off unwanted content on the
      * sides. Useful on wide-screen phones to remove black bars from some movies.
@@ -461,6 +462,7 @@ class PlayerGestureHelper(
                 else AspectRatioFrameLayout.RESIZE_MODE_FIT
         }
         isZoomEnabled = enabled
+        onZoomStateChanged?.invoke(enabled)
     }
 
     private fun releaseAction(event: MotionEvent) {
