@@ -174,6 +174,15 @@ class PlayerActivity : BasePlayerActivity() {
             }
         )
 
+        // Disable clipping on the internal content frame to allow panning zoomed content
+        // Note: We use the resource ID from the library if available, or just assume it exists
+        // androidx.media3.ui.R.id.exo_content_frame might be resolved if we import it or use full name
+        binding.playerView.findViewById<View>(androidx.media3.ui.R.id.exo_content_frame)?.let {
+             if (it is android.view.ViewGroup) {
+                 it.clipChildren = false
+             }
+        }
+
         val playerControls = binding.playerView.findViewById<View>(R.id.player_controls)
         val lockedControls = binding.playerView.findViewById<View>(R.id.locked_player_view)
 
@@ -912,7 +921,7 @@ class PlayerActivity : BasePlayerActivity() {
             binding.playerView.videoSurfaceView?.animate()
                 ?.translationX(0f)
                 ?.translationY(0f)
-                ?.setDuration(300)
+                ?.setDuration(0)
                 ?.start()
         }
 
