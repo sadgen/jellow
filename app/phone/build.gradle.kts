@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose.compiler)
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.kotlin.serialization)
@@ -143,6 +142,7 @@ dependencies {
     implementation(libs.androidx.media3.session)
     implementation(libs.androidx.paging)
     implementation(libs.androidx.paging.compose)
+    implementation(libs.androidx.window)
     implementation(libs.androidx.work)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
