@@ -54,6 +54,10 @@ import org.jellyfin.sdk.model.api.RepeatMode
 import org.jellyfin.sdk.model.api.SortOrder as ItemSortOrder
 import org.jellyfin.sdk.model.api.SubtitleDeliveryMethod
 import org.jellyfin.sdk.model.api.SubtitleProfile
+import org.jellyfin.sdk.model.api.DlnaProfileType
+import org.jellyfin.sdk.model.api.TranscodingProfile
+import org.jellyfin.sdk.model.api.EncodingContext
+import org.jellyfin.sdk.model.api.MediaStreamProtocol
 import org.jellyfin.sdk.model.api.UserConfiguration
 import timber.log.Timber
 
@@ -344,7 +348,7 @@ class JellyfinRepositoryImpl(
             }
         }
 
-    override suspend fun getMediaSources(itemId: UUID, includePath: Boolean): List<FindroidSource> =
+    override suspend fun getMediaSources(itemId: UUID, includePath: Boolean, forceTranscode: Boolean): List<FindroidSource> =
         withContext(Dispatchers.IO) {
             val sources = mutableListOf<FindroidSource>()
             sources.addAll(
@@ -354,32 +358,86 @@ class JellyfinRepositoryImpl(
                         PlaybackInfoDto(
                             userId = jellyfinApi.userId!!,
                             deviceProfile =
-                                DeviceProfile(
-                                    name = "Direct play all",
-                                    maxStaticBitrate = 1_000_000_000,
-                                    maxStreamingBitrate = 1_000_000_000,
-                                    codecProfiles = emptyList(),
-                                    containerProfiles = emptyList(),
-                                    directPlayProfiles = emptyList(),
-                                    transcodingProfiles = emptyList(),
-                                    subtitleProfiles =
-                                        listOf(
-                                            SubtitleProfile("srt", SubtitleDeliveryMethod.EXTERNAL),
-                                            SubtitleProfile("ass", SubtitleDeliveryMethod.EXTERNAL),
-                                        ),
-                                ),
-                            maxStreamingBitrate = 1_000_000_000,
+                                if (forceTranscode || appPreferences.getValue(appPreferences.playerTranscoding)) {
+                                    val bitrate = appPreferences.getValue(appPreferences.playerTranscodingBitrate) * 1_000_000
+                                    DeviceProfile(
+                                        name = "Android Transcode",
+                                        maxStaticBitrate = 0,
+                                        maxStreamingBitrate = bitrate,
+                                        codecProfiles = emptyList(),
+                                        containerProfiles = emptyList(),
+                                        directPlayProfiles = emptyList(),
+                                        transcodingProfiles =
+                                            listOf(
+                                                TranscodingProfile(
+                                                    container = "ts",
+                                                    type = DlnaProfileType.VIDEO,
+                                                    audioCodec = "aac,mp3,opus,flac,vorbis",
+                                                    videoCodec = "h264,hevc,vp9",
+                                                    protocol = MediaStreamProtocol.HLS,
+                                                    context = EncodingContext.STREAMING,
+                                                    conditions = emptyList(),
+                                                ),
+                                                TranscodingProfile(
+                                                    container = "mp4",
+                                                    type = DlnaProfileType.VIDEO,
+                                                    audioCodec = "aac,mp3,opus,flac,vorbis",
+                                                    videoCodec = "h264,hevc,vp9",
+                                                    protocol = MediaStreamProtocol.HTTP,
+                                                    context = EncodingContext.STATIC,
+                                                    conditions = emptyList(),
+                                                ),
+                                            ),
+                                        subtitleProfiles =
+                                            listOf(
+                                                SubtitleProfile(
+                                                    "srt",
+                                                    SubtitleDeliveryMethod.EXTERNAL
+                                                ),
+                                                SubtitleProfile(
+                                                    "ass",
+                                                    SubtitleDeliveryMethod.EXTERNAL
+                                                ),
+                                            ),
+                                    )
+                                } else {
+                                    DeviceProfile(
+                                        name = "Direct play all",
+                                        maxStaticBitrate = 1_000_000_000,
+                                        maxStreamingBitrate = 1_000_000_000,
+                                        codecProfiles = emptyList(),
+                                        containerProfiles = emptyList(),
+                                        directPlayProfiles = emptyList(),
+                                        transcodingProfiles = emptyList(),
+                                        subtitleProfiles =
+                                            listOf(
+                                                SubtitleProfile(
+                                                    "srt",
+                                                    SubtitleDeliveryMethod.EXTERNAL
+                                                ),
+                                                SubtitleProfile(
+                                                    "ass",
+                                                    SubtitleDeliveryMethod.EXTERNAL
+                                                ),
+                                            ),
+                                    )
+                                },
+                            maxStreamingBitrate = if (forceTranscode || appPreferences.getValue(appPreferences.playerTranscoding)) {
+                                appPreferences.getValue(appPreferences.playerTranscodingBitrate) * 1_000_000
+                            } else {
+                                1_000_000_000
+                            },
                         ),
                     )
                     .content
                     .mediaSources
-                    .map { it.toFindroidSource(this@JellyfinRepositoryImpl, itemId, includePath) }
+                    .map { it.toFindroidSource(this@JellyfinRepositoryImpl, itemId, includePath, forceTranscode) }
             )
             sources.addAll(database.getSources(itemId).map { it.toFindroidSource(database) })
             sources
         }
 
-    override suspend fun getStreamUrl(itemId: UUID, mediaSourceId: String): String =
+    override suspend fun getStreamUrl(itemId: UUID, mediaSourceId: String, forceTranscode: Boolean): String =
         withContext(Dispatchers.IO) {
             try {
                 jellyfinApi.videosApi.getVideoStreamUrl(

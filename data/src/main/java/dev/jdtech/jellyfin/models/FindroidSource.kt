@@ -21,12 +21,13 @@ suspend fun MediaSourceInfo.toFindroidSource(
     jellyfinRepository: JellyfinRepository,
     itemId: UUID,
     includePath: Boolean = false,
+    forceTranscode: Boolean = false,
 ): FindroidSource {
     val path =
         when (protocol) {
             MediaProtocol.FILE -> {
                 try {
-                    if (includePath) jellyfinRepository.getStreamUrl(itemId, id.orEmpty()) else ""
+                    if (includePath) jellyfinRepository.getStreamUrl(itemId, id.orEmpty(), forceTranscode) else ""
                 } catch (e: Exception) {
                     ""
                 }

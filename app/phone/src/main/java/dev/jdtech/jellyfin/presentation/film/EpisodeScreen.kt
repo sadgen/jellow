@@ -110,6 +110,7 @@ fun EpisodeScreen(
                     intent.putExtra("itemId", episodeId.toString())
                     intent.putExtra("itemKind", BaseItemKind.EPISODE.serialName)
                     intent.putExtra("startFromBeginning", action.startFromBeginning)
+                    intent.putExtra("forceTranscode", action.forceTranscode)
                     context.startActivity(intent)
                 }
                 is EpisodeAction.OnBackClick -> navigateBack()
@@ -222,8 +223,8 @@ private fun EpisodeScreenLayout(
                     ItemButtonsBar(
                         item = episode,
                         downloaderState = downloaderState,
-                        onPlayClick = { startFromBeginning ->
-                            onAction(EpisodeAction.Play(startFromBeginning = startFromBeginning))
+                        onPlayClick = { startFromBeginning, forceTranscode ->
+                            onAction(EpisodeAction.Play(startFromBeginning = startFromBeginning, forceTranscode = forceTranscode))
                         },
                         onMarkAsPlayedClick = {
                             when (episode.played) {

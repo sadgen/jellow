@@ -20,11 +20,15 @@ import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.MediaStreamType
 import timber.log.Timber
 
-class PlaylistManager @Inject internal constructor(private val repository: JellyfinRepository) {
+class PlaylistManager @Inject internal constructor(
+    private val repository: JellyfinRepository,
+    private val appPreferences: dev.jdtech.jellyfin.settings.domain.AppPreferences,
+) {
     private var startItem: FindroidItem? = null
     private var items: List<FindroidItem> = emptyList()
     private val playerItems: MutableList<PlayerItem> = mutableListOf()
     var currentItemIndex: Int = 0
+    private var isTranscoding: Boolean = false
 
     suspend fun getInitialItem(
         itemId: UUID,
@@ -32,8 +36,10 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
         mediaSourceIndex: Int? = null,
         startFromBeginning: Boolean = false,
         startItemIndex: Int? = null,
+        forceTranscode: Boolean = false,
     ): PlayerItem? {
         Timber.d("Retrieving initial player item")
+        this.isTranscoding = forceTranscode
 
         val initialItem =
             when (itemKind) {
@@ -125,7 +131,7 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
 
         val playbackPosition =
             if (!startFromBeginning) actualStartItem.playbackPositionTicks.div(10000) else 0
-        val playerItem = actualStartItem.toPlayerItem(mediaSourceIndex, playbackPosition)
+        val playerItem = actualStartItem.toPlayerItem(mediaSourceIndex, playbackPosition, isTranscoding)
         playerItems.add(playerItem)
 
         return playerItem
@@ -146,7 +152,7 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
                         if (playerItems.firstOrNull { it.itemId == item.id && (item !is FindroidMovie || it.mediaSourceUri == null) } == null || (item is FindroidMovie && items.size > 1)) {
                             try {
                                 val sourceIndex = if (item is FindroidMovie && item.id == startItem?.id && items.size > 1) itemIndex else null
-                                item.toPlayerItem(sourceIndex, 0L)
+                                item.toPlayerItem(sourceIndex, 0L, isTranscode = false)
                             } catch (e: Exception) {
                                 Timber.e("Failed to retrieve previous player item: $e")
                                 null
@@ -181,7 +187,7 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
                         if (playerItems.firstOrNull { it.itemId == item.id && (item !is FindroidMovie || it.mediaSourceUri == null) } == null || (item is FindroidMovie && items.size > 1)) {
                             try {
                                 val sourceIndex = if (item is FindroidMovie && item.id == startItem?.id && items.size > 1) itemIndex else null
-                                item.toPlayerItem(sourceIndex, 0L)
+                                item.toPlayerItem(sourceIndex, 0L, isTranscode = false)
                             } catch (e: Exception) {
                                 Timber.e("Failed to retrieve next player item: $e")
                                 null
@@ -208,10 +214,11 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
     private suspend fun FindroidItem.toPlayerItem(
         mediaSourceIndex: Int?,
         playbackPosition: Long,
+        isTranscode: Boolean = false,
     ): PlayerItem {
         Timber.d("Converting FindroidItem ${this.id} to PlayerItem")
 
-        val mediaSources = repository.getMediaSources(id, true)
+        val mediaSources = repository.getMediaSources(id, true, isTranscode)
         val mediaSource =
             if (mediaSourceIndex == null) {
                 mediaSources.firstOrNull { it.type == FindroidSourceType.LOCAL } ?: mediaSources[0]
@@ -255,6 +262,7 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
                 }
                 else -> null
             }
+        val playMethod = if (isTranscode || appPreferences.getValue(appPreferences.playerTranscoding)) "Transcoding" else "DirectPlay"
         return PlayerItem(
             name = name,
             itemId = id,
@@ -267,6 +275,8 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
             externalSubtitles = externalSubtitles,
             chapters = chapters.toPlayerChapters(),
             trickplayInfo = trickplayInfo,
+            playMethod = playMethod,
+            bitrate = if (playMethod == "Transcoding") appPreferences.getValue(appPreferences.playerTranscodingBitrate) else null,
         )
     }
 

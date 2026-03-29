@@ -42,7 +42,7 @@ import dev.jdtech.jellyfin.presentation.theme.spacings
 @Composable
 fun ItemButtonsBar(
     item: FindroidItem,
-    onPlayClick: (startFromBeginning: Boolean) -> Unit,
+    onPlayClick: (startFromBeginning: Boolean, forceTranscode: Boolean) -> Unit,
     onMarkAsPlayedClick: () -> Unit,
     onMarkAsFavoriteClick: () -> Unit,
     onDownloadClick: (storageIndex: Int) -> Unit,
@@ -87,12 +87,18 @@ fun ItemButtonsBar(
                 Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small)) {
                     PlayButton(
                         item = item,
-                        onClick = { onPlayClick(false) },
+                        onClick = { onPlayClick(false, false) },
                         modifier = Modifier.weight(weight = 1f, fill = true),
                         enabled = item.canPlay && canPlay,
                     )
+                    FilledTonalIconButton(onClick = { onPlayClick(false, true) }, enabled = item.canPlay && canPlay) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_server),
+                            contentDescription = "Transcode",
+                        )
+                    }
                     if (item.playbackPositionTicks.div(600000000) > 0) {
-                        FilledTonalIconButton(onClick = { onPlayClick(true) }) {
+                        FilledTonalIconButton(onClick = { onPlayClick(true, false) }) {
                             Icon(
                                 painter = painterResource(CoreR.drawable.ic_rotate_ccw),
                                 contentDescription = null,
@@ -109,11 +115,17 @@ fun ItemButtonsBar(
                 ) {
                     PlayButton(
                         item = item,
-                        onClick = { onPlayClick(false) },
+                        onClick = { onPlayClick(false, false) },
                         enabled = item.canPlay && canPlay,
                     )
+                    FilledTonalIconButton(onClick = { onPlayClick(false, true) }, enabled = item.canPlay && canPlay) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_server),
+                            contentDescription = "Transcode",
+                        )
+                    }
                     if (item.playbackPositionTicks.div(600000000) > 0) {
-                        FilledTonalIconButton(onClick = { onPlayClick(true) }) {
+                        FilledTonalIconButton(onClick = { onPlayClick(true, false) }) {
                             Icon(
                                 painter = painterResource(CoreR.drawable.ic_rotate_ccw),
                                 contentDescription = null,
@@ -244,7 +256,7 @@ private fun ItemButtonsBarPreview() {
     FindroidTheme {
         ItemButtonsBar(
             item = dummyEpisode,
-            onPlayClick = {},
+            onPlayClick = { _, _ -> },
             onMarkAsPlayedClick = {},
             onMarkAsFavoriteClick = {},
             onDownloadClick = {},
@@ -263,7 +275,7 @@ private fun ItemButtonsBarDownloadingPreview() {
             item = dummyEpisode,
             downloaderState =
                 DownloaderState(status = DownloadManager.STATUS_RUNNING, progress = 0.3f),
-            onPlayClick = {},
+            onPlayClick = { _, _ -> },
             onMarkAsPlayedClick = {},
             onMarkAsFavoriteClick = {},
             onDownloadClick = {},

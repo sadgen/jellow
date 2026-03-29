@@ -107,6 +107,7 @@ fun MovieScreen(
                     intent.putExtra("itemId", movieId.toString())
                     intent.putExtra("itemKind", BaseItemKind.MOVIE.serialName)
                     intent.putExtra("startFromBeginning", action.startFromBeginning)
+                    intent.putExtra("forceTranscode", action.forceTranscode)
                     action.mediaSourceIndex?.let { intent.putExtra("mediaSourceIndex", it) }
                     context.startActivity(intent)
                 }
@@ -221,8 +222,8 @@ private fun MovieScreenLayout(
                     ItemButtonsBar(
                         item = movie,
                         downloaderState = downloaderState,
-                        onPlayClick = { startFromBeginning ->
-                            onAction(MovieAction.Play(startFromBeginning = startFromBeginning))
+                        onPlayClick = { startFromBeginning, forceTranscode ->
+                            onAction(MovieAction.Play(startFromBeginning = startFromBeginning, forceTranscode = forceTranscode))
                         },
                         onMarkAsPlayedClick = {
                             when (movie.played) {

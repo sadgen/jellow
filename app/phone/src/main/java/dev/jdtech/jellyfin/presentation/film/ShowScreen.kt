@@ -87,6 +87,7 @@ fun ShowScreen(
                     val intent = Intent(context, PlayerActivity::class.java)
                     intent.putExtra("itemId", showId.toString())
                     intent.putExtra("itemKind", BaseItemKind.SERIES.serialName)
+                    intent.putExtra("forceTranscode", action.forceTranscode)
                     context.startActivity(intent)
                 }
                 is ShowAction.PlayTrailer -> {
@@ -188,8 +189,8 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                     Spacer(Modifier.height(MaterialTheme.spacings.small))
                     ItemButtonsBar(
                         item = show,
-                        onPlayClick = { startFromBeginning ->
-                            onAction(ShowAction.Play(startFromBeginning = startFromBeginning))
+                        onPlayClick = { startFromBeginning, forceTranscode ->
+                            onAction(ShowAction.Play(startFromBeginning = startFromBeginning, forceTranscode = forceTranscode))
                         },
                         onMarkAsPlayedClick = {
                             when (show.played) {

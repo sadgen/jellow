@@ -74,6 +74,7 @@ fun SeasonScreen(
                     val intent = Intent(context, PlayerActivity::class.java)
                     intent.putExtra("itemId", seasonId.toString())
                     intent.putExtra("itemKind", BaseItemKind.SEASON.serialName)
+                    intent.putExtra("forceTranscode", action.forceTranscode)
                     context.startActivity(intent)
                 }
                 is SeasonAction.OnBackClick -> navigateBack()
@@ -143,8 +144,8 @@ private fun SeasonScreenLayout(state: SeasonState, onAction: (SeasonAction) -> U
                     Spacer(Modifier.height(MaterialTheme.spacings.default.div(2)))
                     ItemButtonsBar(
                         item = season,
-                        onPlayClick = { startFromBeginning ->
-                            onAction(SeasonAction.Play(startFromBeginning = startFromBeginning))
+                        onPlayClick = { startFromBeginning, forceTranscode ->
+                            onAction(SeasonAction.Play(startFromBeginning = startFromBeginning, forceTranscode = forceTranscode))
                         },
                         onMarkAsPlayedClick = {
                             when (season.played) {

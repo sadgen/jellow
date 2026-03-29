@@ -66,6 +66,7 @@ constructor(
                 currentTrickplay = null,
                 currentChapters = emptyList(),
                 fileLoaded = false,
+                playMethod = "DirectPlay",
             )
         )
     val uiState = _uiState.asStateFlow()
@@ -80,6 +81,8 @@ constructor(
         val currentTrickplay: Trickplay?,
         val currentChapters: List<PlayerChapter>,
         val fileLoaded: Boolean,
+        val playMethod: String = "DirectPlay",
+        val bitrate: Int? = null,
     )
 
     private var items: MutableList<PlayerItem> = mutableListOf()
@@ -177,10 +180,15 @@ constructor(
         startFromBeginning: Boolean,
         mediaSourceIndex: Int? = null,
         startItemIndex: Int? = null,
+        forceTranscode: Boolean = false,
     ) {
         player.addListener(this)
 
         viewModelScope.launch {
+            val isAudio = itemKind == BaseItemKind.AUDIO.serialName
+
+            // configurePlayer(isAudio) // This function is not defined in the original code, skipping for now.
+
             val startItem =
                 try {
                     playlistManager.getInitialItem(
@@ -189,6 +197,7 @@ constructor(
                         mediaSourceIndex = mediaSourceIndex,
                         startFromBeginning = startFromBeginning,
                         startItemIndex = startItemIndex,
+                        forceTranscode = forceTranscode,
                     )
                 } catch (e: Exception) {
                     Timber.e(e)
@@ -387,6 +396,8 @@ constructor(
                                 currentSegment = null,
                                 currentChapters = item.chapters,
                                 fileLoaded = false,
+                                playMethod = item.playMethod,
+                                bitrate = item.bitrate,
                             )
                         }
 

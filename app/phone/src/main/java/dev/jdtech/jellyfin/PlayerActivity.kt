@@ -175,6 +175,12 @@ class PlayerActivity : BasePlayerActivity() {
             } else {
                 null
             }
+        val forceTranscode =
+            if (intent.hasExtra("forceTranscode")) {
+                intent.getBooleanExtra("forceTranscode", false)
+            } else {
+                false
+            }
         forcePortrait = intent.extras!!.getBoolean("forcePortrait", false)
         val startInVr = intent.extras!!.getBoolean("startInVr", false)
 
@@ -234,6 +240,7 @@ class PlayerActivity : BasePlayerActivity() {
         }
 
         val videoNameTextView = binding.playerView.findViewById<TextView>(R.id.video_name)
+        val playMethodTextView = binding.playerView.findViewById<TextView>(R.id.play_method)
 
         val audioButton = binding.playerView.findViewById<ImageButton>(R.id.btn_audio_track)
         val subtitleButton = binding.playerView.findViewById<ImageButton>(R.id.btn_subtitle)
@@ -252,6 +259,23 @@ class PlayerActivity : BasePlayerActivity() {
                         uiState.apply {
                             // Title
                             videoNameTextView.text = currentItemTitle
+
+                            // Play method indicator
+                            val bitrateInfoTextView =
+                                binding.playerView.findViewById<TextView>(R.id.bitrate_info)
+                            if (playMethod == "Transcoding") {
+                                playMethodTextView.text = "TR"
+                                playMethodTextView.isVisible = true
+                                if (bitrate != null) {
+                                    bitrateInfoTextView.text = "$bitrate Mbps"
+                                    bitrateInfoTextView.isVisible = true
+                                } else {
+                                    bitrateInfoTextView.isVisible = false
+                                }
+                            } else {
+                                playMethodTextView.isVisible = false
+                                bitrateInfoTextView.isVisible = false
+                            }
 
                             // Media segment
                             currentSegment?.let { segment ->
@@ -483,6 +507,7 @@ class PlayerActivity : BasePlayerActivity() {
             startFromBeginning = startFromBeginning,
             mediaSourceIndex = mediaSourceIndex,
             startItemIndex = startItemIndex,
+            forceTranscode = forceTranscode,
         )
         hideSystemUI()
         applyPortraitUIAdjustments()

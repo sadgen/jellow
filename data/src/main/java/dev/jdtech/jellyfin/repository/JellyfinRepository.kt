@@ -95,9 +95,9 @@ interface JellyfinRepository {
         offline: Boolean = false,
     ): List<FindroidEpisode>
 
-    suspend fun getMediaSources(itemId: UUID, includePath: Boolean = false): List<FindroidSource>
+    suspend fun getMediaSources(itemId: UUID, includePath: Boolean = false, forceTranscode: Boolean = false): List<FindroidSource>
 
-    suspend fun getStreamUrl(itemId: UUID, mediaSourceId: String): String
+    suspend fun getStreamUrl(itemId: UUID, mediaSourceId: String, forceTranscode: Boolean = false): String
 
     suspend fun getAdditionalParts(itemId: UUID): List<FindroidItem>
 

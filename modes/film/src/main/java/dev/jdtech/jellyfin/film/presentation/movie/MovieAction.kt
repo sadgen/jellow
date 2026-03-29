@@ -7,6 +7,7 @@ sealed interface MovieAction {
         val startFromBeginning: Boolean = false,
         val mediaSourceIndex: Int? = null,
         val startItemIndex: Int? = null,
+        val forceTranscode: Boolean = false,
     ) : MovieAction
 
     data class PlayTrailer(val trailer: String) : MovieAction

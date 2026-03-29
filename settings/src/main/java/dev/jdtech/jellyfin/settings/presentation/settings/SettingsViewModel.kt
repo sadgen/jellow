@@ -39,6 +39,18 @@ class SettingsViewModel @Inject constructor(private val appPreferences: AppPrefe
                 preferences =
                     listOf(
                         PreferenceSwitch(
+                            nameStringResource = R.string.pref_server_transcoding_enable,
+                            supportedDeviceTypes = listOf(DeviceType.PHONE),
+                            backendPreference = appPreferences.playerTranscoding,
+                        ),
+                        PreferenceIntInput(
+                            nameStringResource = R.string.pref_player_transcoding_bitrate,
+                            dependencies = listOf(appPreferences.playerTranscoding),
+                            backendPreference = appPreferences.playerTranscodingBitrate,
+                            suffixRes = R.string.mbps,
+                            supportedDeviceTypes = listOf(DeviceType.PHONE),
+                        ),
+                        PreferenceSwitch(
                             nameStringResource = R.string.offline_mode,
                             descriptionStringRes = R.string.offline_mode_summary,
                             iconDrawableId = R.drawable.ic_server_off,

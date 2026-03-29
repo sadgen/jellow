@@ -33,6 +33,10 @@ class AppPreferences @Inject constructor(val sharedPreferences: SharedPreference
     val playerMpvVo = Preference("pref_player_mpv_vo", "gpu")
     val playerMpvAo = Preference("pref_player_mpv_ao", "audiotrack")
 
+    // Player - transcoding
+    val playerTranscoding = Preference("pref_player_transcoding", false)
+    val playerTranscodingBitrate = Preference("pref_player_transcoding_bitrate", 10)
+
     // Player - gestures
     val playerGestures = Preference("pref_player_gestures", true)
     val playerGesturesVB = Preference("pref_player_gestures_vb", true)

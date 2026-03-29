@@ -11,10 +11,12 @@ data class PlayerItem(
     val mediaSourceId: String,
     val playbackPosition: Long,
     val mediaSourceUri: String = "",
+    val playMethod: String = "DirectPlay",
     val parentIndexNumber: Int? = null,
     val indexNumber: Int? = null,
     val indexNumberEnd: Int? = null,
     val externalSubtitles: List<ExternalSubtitle> = emptyList(),
     val chapters: List<PlayerChapter> = emptyList(),
     val trickplayInfo: TrickplayInfo? = null,
+    val bitrate: Int? = null,
 ) : Parcelable

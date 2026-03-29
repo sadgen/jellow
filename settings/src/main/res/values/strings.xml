@@ -28,6 +28,8 @@
     <string name="pref_player_gestures_seek_trickplay">Trickplay on seek gesture</string>
     <string name="pref_player_gestures_seek_trickplay_summary">Display preview images on seek gesture</string>
     <string name="mpv_player">mpv player</string>
+    <string name="transcoding">Transcoding</string>
+    <string name="transcoding_summary">Enable server-side transcoding for remote playback</string>
     <string name="download_mobile_data">Download using mobile data</string>
     <string name="download_roaming">Download when roaming</string>
     <string name="mpv_player_summary">Use the experimental mpv player to play videos. mpv has support for more video, audio and subtitle codecs.</string>
@@ -62,6 +64,9 @@
     <string name="picture_in_picture_gesture_summary">Use home button or gesture to enter picture-in-picture while the video is playing</string>
     <string name="offline_mode">Offline Mode</string>
     <string name="offline_mode_summary">Watch movies and series without a connection to the server</string>
+    <string name="pref_server_transcoding_enable">Enable Server Transcoding</string>
+    <string name="pref_player_transcoding_bitrate">Transcoding Bitrate</string>
+    <string name="mbps">Mbps</string>
     <string name="theme">Theme</string>
     <string name="theme_system">Follow system</string>
     <string name="theme_light">Light</string>
