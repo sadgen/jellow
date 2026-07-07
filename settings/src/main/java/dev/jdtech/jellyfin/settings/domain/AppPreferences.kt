@@ -23,15 +23,15 @@ class AppPreferences @Inject constructor(val sharedPreferences: SharedPreference
     val displayExtraInfo = Preference("pref_display_extra_info", false)
 
     // Player
+    val playerBackend = Preference("pref_player_backend", "exoplayer")
     val playerBrightness = Preference("pref_player_brightness", -1.0f)
     val playerVrMode = Preference("pref_player_vr_mode", false)
     val playerVrProjection = Preference("pref_player_vr_projection", "360_2D")
 
     // Player - mpv
-    val playerMpv = Preference("pref_player_mpv", false)
     val playerMpvHwdec = Preference("pref_player_mpv_hwdec", "mediacodec")
-    val playerMpvVo = Preference("pref_player_mpv_vo", "gpu")
-    val playerMpvAo = Preference("pref_player_mpv_ao", "audiotrack")
+    val playerMpvVo = Preference("pref_player_mpv_vo", "gpu-next")
+    val playerMpvAo = Preference("pref_player_mpv_ao", "aaudio")
 
     // Player - transcoding
     val playerTranscoding = Preference("pref_player_transcoding", false)
