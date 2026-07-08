@@ -53,6 +53,7 @@ import android.view.MotionEvent
 import android.os.Vibrator
 import android.os.VibrationEffect
 import android.content.Context
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -93,6 +94,12 @@ class PlayerActivity : BasePlayerActivity() {
     private var originalTouchListener: View.OnTouchListener? = null
     
     private val gyroController by lazy { StandardVideoGyroController() }
+
+    private var lastBufferedPosition = 0L
+    private var lastNetworkCheckTime = 0L
+    private var totalBytesDownloaded = 0L
+    private var currentDownloadSpeedMbps = 0.0
+    private var lastMediaId: String? = null
 
     private val isPipSupported by lazy {
         // Check if device has PiP feature
@@ -263,18 +270,51 @@ class PlayerActivity : BasePlayerActivity() {
                             // Play method indicator
                             val bitrateInfoTextView =
                                 binding.playerView.findViewById<TextView>(R.id.bitrate_info)
+                            val playbackInfoContainer =
+                                binding.playerView.findViewById<View>(R.id.playback_info_container)
+                            val codecInfoTextView =
+                                binding.playerView.findViewById<TextView>(R.id.codec_info)
+                            val bitrateInfoOverlay =
+                                binding.playerView.findViewById<TextView>(R.id.bitrate_info_overlay)
                             if (playMethod == "Transcoding") {
                                 playMethodTextView.text = "TR"
                                 playMethodTextView.isVisible = true
-                                if (bitrate != null) {
-                                    bitrateInfoTextView.text = "$bitrate Mbps"
+                                val bitrateDisplay = bitrate?.toLongOrNull()?.let { bps ->
+                                    when {
+                                        bps >= 1_000_000 -> "${bps / 1_000_000} Mbps"
+                                        bps >= 1_000 -> "${bps / 1_000} kbps"
+                                        else -> "$bps bps"
+                                    }
+                                }
+                                if (bitrateDisplay != null) {
+                                    bitrateInfoTextView.text = bitrateDisplay
                                     bitrateInfoTextView.isVisible = true
                                 } else {
                                     bitrateInfoTextView.isVisible = false
                                 }
+                                // Playback info overlay (bottom-left)
+                                playbackInfoContainer.isVisible = true
+                                val videoTrack = viewModel.player.currentTracks.groups
+                                    .firstOrNull { it.type == C.TRACK_TYPE_VIDEO }
+                                val videoFormat = videoTrack?.mediaTrackGroup?.getFormat(0)
+                                val codec = videoFormat?.codecs?.uppercase() ?: ""
+                                val videoSize = viewModel.player.videoSize
+                                codecInfoTextView.text = if (codec.isNotEmpty() && videoSize.height > 0) {
+                                    "$codec ${videoSize.height}p"
+                                } else {
+                                    codec
+                                }
+                                codecInfoTextView.isVisible = codecInfoTextView.text.isNotEmpty()
+                                if (bitrateDisplay != null) {
+                                    bitrateInfoOverlay.text = bitrateDisplay
+                                    bitrateInfoOverlay.isVisible = true
+                                } else {
+                                    bitrateInfoOverlay.isVisible = false
+                                }
                             } else {
                                 playMethodTextView.isVisible = false
                                 bitrateInfoTextView.isVisible = false
+                                playbackInfoContainer.isVisible = false
                             }
 
                             // Media segment
@@ -387,6 +427,13 @@ class PlayerActivity : BasePlayerActivity() {
                     }
                 }
 
+                launch {
+                    while (true) {
+                        updateNetworkStats()
+                        delay(2000L)
+                    }
+                }
+
                 if (
                     appPreferences.getValue(appPreferences.playerMediaSegmentsSkipButton) ||
                         appPreferences.getValue(appPreferences.playerMediaSegmentsAutoSkip)
@@ -489,6 +536,35 @@ class PlayerActivity : BasePlayerActivity() {
         }
 
         pipButton.setOnClickListener { pictureInPicture() }
+
+        val playbackInfoContainer = binding.playerView.findViewById<View>(R.id.playback_info_container)
+        playbackInfoContainer.setOnClickListener {
+            val bitrateOptions = listOf(
+                "1 Mbps" to "1000000",
+                "2 Mbps" to "2000000",
+                "4 Mbps" to "4000000",
+                "8 Mbps" to "8000000",
+                "10 Mbps" to "10000000",
+                "15 Mbps" to "15000000",
+                "20 Mbps" to "20000000",
+                "40 Mbps" to "40000000",
+                "80 Mbps" to "80000000",
+                "120 Mbps" to "120000000",
+            )
+            val currentBitrate = appPreferences.getValue(appPreferences.playerTranscodingBitrate) ?: "10000000"
+            val currentIndex = bitrateOptions.indexOfFirst { it.second == currentBitrate }
+
+            MaterialAlertDialogBuilder(this)
+                .setTitle("Select bitrate")
+                .setSingleChoiceItems(
+                    bitrateOptions.map { it.first }.toTypedArray(),
+                    currentIndex.coerceAtLeast(0),
+                ) { dialog, which ->
+                    viewModel.reloadWithBitrate(bitrateOptions[which].second)
+                    dialog.dismiss()
+                }
+                .show()
+        }
 
         // Set marker color
         val timeBar = binding.playerView.findViewById<DefaultTimeBar>(R.id.exo_progress)
@@ -812,6 +888,66 @@ class PlayerActivity : BasePlayerActivity() {
         }
     }
 
+    private fun updateNetworkStats() {
+        val player = viewModel.player
+        val bufferedPos = player.bufferedPosition
+        val now = System.currentTimeMillis()
+        val currentMediaId = player.currentMediaItem?.mediaId
+
+        if (currentMediaId != lastMediaId) {
+            totalBytesDownloaded = 0L
+            currentDownloadSpeedMbps = 0.0
+            lastMediaId = currentMediaId
+            lastBufferedPosition = bufferedPos
+            lastNetworkCheckTime = now
+            return
+        }
+
+        val bufferDelta = bufferedPos - lastBufferedPosition
+
+        if (bufferDelta < -1000) {
+            // Seek happened - buffer was reset
+            lastBufferedPosition = bufferedPos
+            lastNetworkCheckTime = now
+            return
+        }
+
+        if (lastNetworkCheckTime > 0 && bufferDelta > 0) {
+            val timeDelta = (now - lastNetworkCheckTime) / 1000.0
+
+            if (timeDelta > 0) {
+                val bitrate = player.currentTracks.groups
+                    .firstOrNull { it.type == C.TRACK_TYPE_VIDEO }
+                    ?.mediaTrackGroup?.getFormat(0)?.bitrate?.toLong()
+                    ?: appPreferences.getValue(appPreferences.playerTranscodingBitrate)?.toLongOrNull()
+                    ?: 10_000_000L
+                val bytesDownloaded = ((bufferDelta / 1000.0) * (bitrate / 8.0)).toLong()
+                currentDownloadSpeedMbps = (bytesDownloaded * 8 / timeDelta) / 1_000_000.0
+                totalBytesDownloaded += bytesDownloaded
+            }
+        } else if (bufferedPos < lastBufferedPosition) {
+            // Normal buffer fluctuation - don't reset total
+        }
+
+        lastBufferedPosition = bufferedPos
+        lastNetworkCheckTime = now
+
+        val networkSpeedView = binding.playerView.findViewById<TextView>(R.id.network_speed)
+        val dataUsageView = binding.playerView.findViewById<TextView>(R.id.data_usage)
+
+        networkSpeedView.text = String.format("%.1f Mbps", currentDownloadSpeedMbps)
+        dataUsageView.text = formatBytes(totalBytesDownloaded)
+    }
+
+    private fun formatBytes(bytes: Long): String {
+        return when {
+            bytes < 1024 -> "$bytes B"
+            bytes < 1024 * 1024 -> "${bytes / 1024} KB"
+            bytes < 1024 * 1024 * 1024 -> String.format("%.1f MB", bytes / (1024.0 * 1024.0))
+            else -> String.format("%.1f GB", bytes / (1024.0 * 1024.0 * 1024.0))
+        }
+    }
+
     private fun finishPlayback() {
         try {
             val surfaceView = binding.playerView.videoSurfaceView
@@ -939,7 +1075,7 @@ class PlayerActivity : BasePlayerActivity() {
         private var maxTransY = 0f
         
         // For MPV-native panning
-        private val isMpv: Boolean get() = appPreferences.getValue(appPreferences.playerMpv)
+        private val isMpv: Boolean get() = appPreferences.getValue(appPreferences.playerBackend) == "mpv"
         private var mpvPanX = 0.0
         private var mpvPanY = 0.0
         private var maxMpvPanX = 0.0
@@ -982,8 +1118,8 @@ class PlayerActivity : BasePlayerActivity() {
                 mpvPanX = 0.0
                 mpvPanY = 0.0
                 try {
-                    dev.jdtech.mpv.MPVLib.setPropertyDouble("video-pan-x", 0.0)
-                    dev.jdtech.mpv.MPVLib.setPropertyDouble("video-pan-y", 0.0)
+                    (viewModel.player as? dev.jdtech.jellyfin.player.local.mpv.MPVPlayer)?.setProperty("video-pan-x", "0.0")
+                    (viewModel.player as? dev.jdtech.jellyfin.player.local.mpv.MPVPlayer)?.setProperty("video-pan-y", "0.0")
                 } catch (e: Exception) {
                     Timber.e(e, "Failed to reset MPV pan")
                 }
@@ -1035,8 +1171,8 @@ class PlayerActivity : BasePlayerActivity() {
             mpvPanY = max(-maxMpvPanY, min(mpvPanY, maxMpvPanY))
             
             try {
-                dev.jdtech.mpv.MPVLib.setPropertyDouble("video-pan-x", mpvPanX)
-                dev.jdtech.mpv.MPVLib.setPropertyDouble("video-pan-y", mpvPanY)
+                (viewModel.player as? dev.jdtech.jellyfin.player.local.mpv.MPVPlayer)?.setProperty("video-pan-x", mpvPanX.toString())
+                (viewModel.player as? dev.jdtech.jellyfin.player.local.mpv.MPVPlayer)?.setProperty("video-pan-y", mpvPanY.toString())
             } catch (e: Exception) {
                 Timber.e(e, "Failed to set MPV pan")
             }

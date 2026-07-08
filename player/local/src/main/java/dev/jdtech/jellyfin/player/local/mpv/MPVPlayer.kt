@@ -157,6 +157,7 @@ class MPVPlayer(
         mpvLib.setOptionString("ao", audioOutput)
         mpvLib.setOptionString("gpu-context", "android")
         mpvLib.setOptionString("opengl-es", "yes")
+        mpvLib.setOptionString("idle", "once")
 
         // Hardware video decoding
         mpvLib.setOptionString("hwdec", hwDec)
@@ -314,6 +315,8 @@ class MPVPlayer(
     private var initialIndex: Int = 0
     private var initialSeekTo: Long = 0L
     private var oldMediaItem: MediaItem? = null
+    private var pendingUris: MutableList<String>? = null
+    private var hasSurface: Boolean = false
 
     // mpv events
     override fun eventProperty(property: String) {
@@ -465,9 +468,8 @@ class MPVPlayer(
                         for (videoListener in videoListeners) {
                             videoListener.onRenderedFirstFrame()
                         }
-                    } else {
-                        setPlayerStateAndNotifyIfChanged(playbackState = STATE_READY)
                     }
+                    setPlayerStateAndNotifyIfChanged(playbackState = STATE_READY)
                 }
                 else -> Unit
             }
@@ -834,16 +836,35 @@ class MPVPlayer(
 
     /** Prepares the player. */
     override fun prepare() {
-        internalMediaItems.forEachIndexed { index, mediaItem ->
+        pendingUris = internalMediaItems.mapNotNull { it.localConfiguration?.uri?.toString() }.toMutableList()
+        prepareMediaItem(initialIndex)
+        loadPending()
+    }
+
+    private fun loadPending() {
+        if (!hasSurface || pendingUris == null) return
+        pendingUris!!.forEachIndexed { index, uri ->
             mpvLib.command(
                 arrayOf(
                     "loadfile",
-                    "${mediaItem.localConfiguration?.uri}",
+                    uri,
                     if (index == 0) "replace" else "append",
                 )
             )
         }
-        prepareMediaItem(initialIndex)
+        val currentItem = internalMediaItems.getOrNull(currentMediaItemIndex)
+        currentItem?.localConfiguration?.subtitleConfigurations?.forEach { subtitle ->
+            initialCommands.add(
+                arrayOf(
+                    "sub-add",
+                    "${subtitle.uri}",
+                    "auto",
+                    "${subtitle.label}",
+                    "${subtitle.language}",
+                )
+            )
+        }
+        pendingUris = null
     }
 
     /**
@@ -1016,23 +1037,6 @@ class MPVPlayer(
     private fun prepareMediaItem(index: Int) {
         internalMediaItems.getOrNull(index)?.let { mediaItem ->
             resetInternalState()
-            mediaItem.localConfiguration?.subtitleConfigurations?.forEach { subtitle ->
-                initialCommands.add(
-                    arrayOf(
-                        /* command= */ "sub-add",
-                        /* url= */ "${subtitle.uri}",
-                        /* flags= */ "auto",
-                        /* title= */ "${subtitle.label}",
-                        /* lang= */ "${subtitle.language}",
-                    )
-                )
-            }
-            // Only set the playlist index when the index is not the currently playing item.
-            // Otherwise
-            // playback will be restarted.
-            // This is a problem on initial load when the first item is still loading causing
-            // duplicate
-            // external subtitle entries.
             if (currentMediaItemIndex != index) {
                 mpvLib.command(arrayOf("playlist-play-index", "$index"))
             }
@@ -1263,9 +1267,9 @@ class MPVPlayer(
      * player.
      */
     override fun clearVideoSurface() {
-        MPVLib.setOptionString("vo", "null")
-        MPVLib.setOptionString("force-window", "no")
-        MPVLib.detachSurface()
+        mpvLib.setOptionString("vo", "null")
+        mpvLib.setOptionString("force-window", "no")
+        mpvLib.detachSurface()
         textureViewSurface?.release()
         textureViewSurface = null
     }
@@ -1296,6 +1300,14 @@ class MPVPlayer(
         TODO("Not yet implemented")
     }
 
+    fun setOption(name: String, value: String) {
+        mpvLib.setOptionString(name, value)
+    }
+
+    fun setProperty(name: String, value: String) {
+        mpvLib.setPropertyString(name, value)
+    }
+
     /**
      * Sets the [SurfaceHolder] that holds the [Surface] onto which video will be rendered. The
      * player will track the lifecycle of the surface automatically.
@@ -1324,6 +1336,12 @@ class MPVPlayer(
      */
     override fun setVideoSurfaceView(surfaceView: SurfaceView?) {
         surfaceView?.holder?.addCallback(surfaceHolder)
+        if (surfaceView?.holder?.surface?.isValid == true) {
+            hasSurface = true
+            mpvLib.attachSurface(surfaceView.holder.surface)
+            mpvLib.setOptionString("force-window", "yes")
+            loadPending()
+        }
     }
 
     /**
@@ -1507,6 +1525,8 @@ class MPVPlayer(
                 mpvLib.attachSurface(holder.surface)
                 mpvLib.setOptionString("force-window", "yes")
                 mpvLib.setOptionString("vo", videoOutput)
+                hasSurface = true
+                loadPending()
             }
 
             /**
@@ -1540,6 +1560,7 @@ class MPVPlayer(
                 mpvLib.setOptionString("vo", "null")
                 mpvLib.setOptionString("force-window", "no")
                 mpvLib.detachSurface()
+                hasSurface = false
             }
         }
 
@@ -1552,13 +1573,13 @@ class MPVPlayer(
                 Timber.d("MPV: onSurfaceTextureAvailable ${width}x${height}")
                 if (currentSurfaceTexture == surface) {
                     Timber.d("MPV: SurfaceTexture already attached, updating size")
-                    MPVLib.setPropertyString("android-surface-size", "${width}x$height")
+                    mpvLib.setPropertyString("android-surface-size", "${width}x$height")
                     return
                 }
 
                 if (textureViewSurface != null) {
                     try {
-                        MPVLib.detachSurface()
+                        mpvLib.detachSurface()
                     } catch (e: Exception) {
                         Timber.e(e, "MPV: Failed to detach old surface")
                     }
@@ -1569,23 +1590,23 @@ class MPVPlayer(
                 currentSurfaceTexture = surface
                 val s = Surface(surface)
                 textureViewSurface = s
-                MPVLib.attachSurface(s)
+                mpvLib.attachSurface(s)
                 // Set default options
-                MPVLib.setOptionString("force-window", "yes")
-                MPVLib.setOptionString("vo", videoOutput)
-                MPVLib.setPropertyString("android-surface-size", "${width}x$height")
+                mpvLib.setOptionString("force-window", "yes")
+                mpvLib.setOptionString("vo", videoOutput)
+                mpvLib.setPropertyString("android-surface-size", "${width}x$height")
             }
 
             override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
-                MPVLib.setPropertyString("android-surface-size", "${width}x$height")
+                mpvLib.setPropertyString("android-surface-size", "${width}x$height")
             }
 
             override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
                 Timber.d("MPV: onSurfaceTextureDestroyed")
                 try {
-                    MPVLib.setOptionString("vo", "null")
-                    MPVLib.setOptionString("force-window", "no")
-                    MPVLib.detachSurface()
+                    mpvLib.setOptionString("vo", "null")
+                    mpvLib.setOptionString("force-window", "no")
+                    mpvLib.detachSurface()
                 } catch (e: Exception) {
                     Timber.e(e, "MPV: Error destroying surface")
                 }

@@ -82,7 +82,7 @@ constructor(
         val currentChapters: List<PlayerChapter>,
         val fileLoaded: Boolean,
         val playMethod: String = "DirectPlay",
-        val bitrate: Int? = null,
+        val bitrate: String? = null,
     )
 
     private var items: MutableList<PlayerItem> = mutableListOf()
@@ -706,6 +706,52 @@ constructor(
      */
     fun seekToPreviousChapter(): PlayerChapter? {
         return getPreviousChapterIndex()?.let { seekToChapter(it) }
+    }
+
+    fun reloadWithBitrate(newBitrate: String) {
+        viewModelScope.launch {
+            try {
+                appPreferences.setValue(appPreferences.playerTranscodingBitrate, newBitrate)
+
+                val position = player.currentPosition
+                val mediaId = player.currentMediaItem?.mediaId ?: return@launch
+                val itemId = UUID.fromString(mediaId)
+                val currentItem = items.firstOrNull { it.itemId.toString() == mediaId } ?: return@launch
+
+                val sources = repository.getMediaSources(itemId, includePath = true, forceTranscode = true)
+                val source = sources.firstOrNull() ?: return@launch
+
+                val newMediaItem = MediaItem.Builder()
+                    .setMediaId(mediaId)
+                    .setUri(source.path)
+                    .setMediaMetadata(MediaMetadata.Builder().setTitle(currentItem.name).build())
+                    .setSubtitleConfigurations(
+                        currentItem.externalSubtitles.map { sub ->
+                            MediaItem.SubtitleConfiguration.Builder(sub.uri)
+                                .setLabel(sub.title)
+                                .setMimeType(sub.mimeType)
+                                .setLanguage(sub.language)
+                                .build()
+                        }
+                    )
+                    .build()
+
+                player.stop()
+                player.clearMediaItems()
+                player.setMediaItem(newMediaItem, position.coerceAtLeast(0))
+                player.prepare()
+                player.play()
+
+                _uiState.update {
+                    it.copy(
+                        bitrate = newBitrate,
+                        playMethod = "Transcoding",
+                    )
+                }
+            } catch (e: Exception) {
+                Timber.e(e)
+            }
+        }
     }
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
