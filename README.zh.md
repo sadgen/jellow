@@ -1,5 +1,7 @@
 # Jellow
 
+[**English**](README.md) | [**中文**](README.zh.md)
+
 **Jellow** 是一个第三方的 [Jellyfin](https://jellyfin.org) Android 客户端，基于 [Findroid](https://github.com/jarnedemeulemeester/findroid) 修改增强。
 
 > 个人维护的分支，非官方项目。

@@ -1,5 +1,7 @@
 # Jellow
 
+[**English**](README.md) | [**中文**](README.zh.md)
+
 **Jellow** is a third-party Android application for [Jellyfin](https://jellyfin.org), forked from [Findroid](https://github.com/jarnedemeulemeester/findroid). It provides a native user interface to browse and play movies and series.
 
 > This is a personal fork with additional features. Not affiliated with the official Findroid project.
