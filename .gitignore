@@ -42,3 +42,4 @@ fastlane/test_output
 android-sdk.zip
 .gitignore
 openjdk-21.tar.gz
+jdk-21.0.10+7/
