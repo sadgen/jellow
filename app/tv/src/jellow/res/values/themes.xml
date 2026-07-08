@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base theme for Jellow TV app -->
+    <style name="Base.Theme.Jellow" parent="Base.Theme.Findroid">
+    </style>
+
+    <style name="Theme.Jellow" parent="Base.Theme.Jellow">
+        <item name="colorPrimary">#833AB4</item>
+        <item name="colorPrimaryDark">#6A259E</item>
+        <item name="colorAccent">#E1306C</item>
+        <item name="colorPrimaryVariant">#6A259E</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSecondary">#E1306C</item>
+        <item name="colorSecondaryVariant">#C6225A</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorTertiary">#FCAF45</item>
+    </style>
+</resources>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Jellow</string>
+    <string name="title_home">Home</string>
+    <string name="title_download">Downloads</string>
+    <string name="privacy_policy_notice">By using Jellow you agree with our Privacy Policy</string>
+    <string name="welcome">Welcome to Jellow</string>
+    <string name="welcome_text">Jellow is a third-party client for Jellyfin, based on Findroid. Jellow by itself does not contain any media.\n\nIn order to use this client, you need to host your own Jellyfin server.</string>
+    <string name="github_url" translatable="false">https://github.com/sadgen/jellow</string>
+</resources>

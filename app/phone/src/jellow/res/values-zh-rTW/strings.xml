@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Jellow</string>
+    <string name="welcome">歡迎使用 Jellow</string>
+    <string name="welcome_text">Jellow 是 Jellyfin 的第三方客戶端（基於 Findroid）。Jellow 本身不包含任何媒體。\n\n為了使用此客戶端，你需要主機你自己的 Jellyfin 伺服器。</string>
+    <string name="privacy_policy_notice">使用 Jellow 即表示您同意我們的隱私權政策</string>
+</resources>
