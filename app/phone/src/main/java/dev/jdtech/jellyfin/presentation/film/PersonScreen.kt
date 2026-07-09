@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,11 +14,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
@@ -27,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
@@ -70,11 +74,13 @@ fun PersonScreen(
                 is PersonAction.NavigateBack -> navigateBack()
                 is PersonAction.NavigateHome -> navigateHome()
                 is PersonAction.NavigateToItem -> navigateToItem(action.item)
+                else -> Unit
             }
         },
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> Unit) {
     val safePadding = rememberSafePadding()
@@ -112,6 +118,11 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
                                 if (person.overview.isNotBlank()) {
                                     OverviewText(text = person.overview, maxCollapsedLines = 12)
                                 }
+                                // 排序和视图切换按钮
+                                PersonActionButtons(
+                                    isListView = state.isListView,
+                                    onToggleView = { onAction(PersonAction.ToggleViewMode) },
+                                )
                             }
                         }
                     }
@@ -130,57 +141,61 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
                             if (person.overview.isNotBlank()) {
                                 OverviewText(text = person.overview, maxCollapsedLines = 4)
                             }
+                            // 排序和视图切换按钮
+                            PersonActionButtons(
+                                isListView = state.isListView,
+                                onToggleView = { onAction(PersonAction.ToggleViewMode) },
+                            )
                         }
                     }
                 }
 
                 Spacer(Modifier.height(MaterialTheme.spacings.small))
 
-                Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small)) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(itemsPadding),
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+                ) {
                     if (state.starredInMovies.isNotEmpty()) {
-                        Column {
-                            Text(
-                                text = stringResource(CoreR.string.movies_label),
-                                modifier = Modifier.padding(itemsPadding),
-                                style = MaterialTheme.typography.titleMedium,
-                            )
-                            Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))
-                            LazyRow(
-                                contentPadding = itemsPadding,
-                                horizontalArrangement =
-                                    Arrangement.spacedBy(MaterialTheme.spacings.small),
-                            ) {
-                                items(state.starredInMovies, key = { it.id }) { item ->
-                                    ItemCard(
-                                        item = item,
-                                        direction = Direction.VERTICAL,
-                                        onClick = { onAction(PersonAction.NavigateToItem(item)) },
-                                    )
-                                }
+                        Text(
+                            text = stringResource(CoreR.string.movies_label),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+                            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+                        ) {
+                            state.starredInMovies.forEach { item ->
+                                ItemCard(
+                                    item = item,
+                                    direction = if (state.isListView) Direction.HORIZONTAL else Direction.VERTICAL,
+                                    onClick = { onAction(PersonAction.NavigateToItem(item)) },
+                                    modifier = Modifier
+                                        .fillMaxWidth(if (state.isListView) 1f else 0.5f),
+                                )
                             }
                         }
                     }
 
                     if (state.starredInShows.isNotEmpty()) {
-                        Column {
-                            Text(
-                                text = stringResource(CoreR.string.shows_label),
-                                modifier = Modifier.padding(itemsPadding),
-                                style = MaterialTheme.typography.titleMedium,
-                            )
-                            Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))
-                            LazyRow(
-                                contentPadding = itemsPadding,
-                                horizontalArrangement =
-                                    Arrangement.spacedBy(MaterialTheme.spacings.small),
-                            ) {
-                                items(state.starredInShows, key = { it.id }) { item ->
-                                    ItemCard(
-                                        item = item,
-                                        direction = Direction.VERTICAL,
-                                        onClick = { onAction(PersonAction.NavigateToItem(item)) },
-                                    )
-                                }
+                        Text(
+                            text = stringResource(CoreR.string.shows_label),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+                            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+                        ) {
+                            state.starredInShows.forEach { item ->
+                                ItemCard(
+                                    item = item,
+                                    direction = if (state.isListView) Direction.HORIZONTAL else Direction.VERTICAL,
+                                    onClick = { onAction(PersonAction.NavigateToItem(item)) },
+                                    modifier = Modifier
+                                        .fillMaxWidth(if (state.isListView) 1f else 0.5f),
+                                )
                             }
                         }
                     }
@@ -196,6 +211,25 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
             onBackClick = { onAction(PersonAction.NavigateBack) },
             onHomeClick = { onAction(PersonAction.NavigateHome) },
         )
+    }
+}
+
+@Composable
+private fun PersonActionButtons(
+    isListView: Boolean,
+    onToggleView: () -> Unit,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+    ) {
+        IconButton(onClick = onToggleView) {
+            Icon(
+                painter = painterResource(
+                    if (isListView) CoreR.drawable.ic_view_grid else CoreR.drawable.ic_view_list
+                ),
+                contentDescription = null,
+            )
+        }
     }
 }
 

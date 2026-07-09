@@ -46,4 +46,15 @@ class PersonViewModel @Inject internal constructor(private val repository: Jelly
             }
         }
     }
+
+    fun onAction(action: PersonAction) {
+        when (action) {
+            is PersonAction.ToggleViewMode -> {
+                viewModelScope.launch {
+                    _state.emit(_state.value.copy(isListView = !_state.value.isListView))
+                }
+            }
+            else -> Unit
+        }
+    }
 }
