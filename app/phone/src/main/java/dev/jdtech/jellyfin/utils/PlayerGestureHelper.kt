@@ -398,21 +398,22 @@ class PlayerGestureHelper(
             swipeGestureValueTrackerZoom = if (playerView.player is MPVPlayer) {
                 (playerView.player as MPVPlayer).getZoomLevel()
             } else {
-                // ExoPlayer: 读取当前 scale 作为初始值
+                // ExoPlayer: read current videoSurfaceView scale
                 val currentScale = playerView.videoSurfaceView?.scaleX ?: 1f
-                (currentScale - 1f) / 0.5f // 0=1.0x → 0%, 1=1.5x → 100%
+                (currentScale - 1f) // 0=1.0x, 1=2.0x
             }
         }
         swipeGestureValueTrackerZoom = (swipeGestureValueTrackerZoom + ratioChange).coerceIn(0f, 1f)
         val process = (swipeGestureValueTrackerZoom * 100).toInt()
         if (playerView.player is MPVPlayer) {
-            // MPV: panscan 0→1 天然对应 左右填满→上下填满
+            // MPV: panscan 0→1 maps perfectly to 左右填满→上下填满
             (playerView.player as MPVPlayer).setZoomLevel(swipeGestureValueTrackerZoom)
         } else {
-            // ExoPlayer: 保持 FIT 模式，仅平滑缩放
-            // 0% → 1.0x (fit width), 50% → 1.25x, 100% → 1.5x
-            // 始终不超出容器，上下不过边
-            val scale = 1.0f + swipeGestureValueTrackerZoom * 0.5f
+            // ExoPlayer: stay in FIT mode, smooth proportional zoom
+            // 0% → 1.0x (fit width = 左右填满)
+            // 100% → 2.0x (fills more of screen proportionally)
+            // Always within container bounds - never exceeds edges
+            val scale = 1.0f + swipeGestureValueTrackerZoom
             playerView.videoSurfaceView?.apply {
                 scaleX = scale
                 scaleY = scale

@@ -62,6 +62,7 @@ import org.jellyfin.sdk.model.api.TranscodingProfile
 import org.jellyfin.sdk.model.api.EncodingContext
 import org.jellyfin.sdk.model.api.MediaStreamProtocol
 import org.jellyfin.sdk.model.api.UserConfiguration
+import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.request.GetPersonsRequest
 import timber.log.Timber
 import kotlin.math.roundToInt
@@ -313,6 +314,9 @@ class JellyfinRepositoryImpl(
             val request = GetPersonsRequest(
                 limit = limit,
                 fields = listOf(ItemFields.ITEM_COUNTS, ItemFields.PRIMARY_IMAGE_ASPECT_RATIO),
+                enableImages = true,
+                imageTypeLimit = 1,
+                enableImageTypes = listOf(ImageType.PRIMARY),
                 userId = jellyfinApi.userId,
             )
             jellyfinApi.personsApi

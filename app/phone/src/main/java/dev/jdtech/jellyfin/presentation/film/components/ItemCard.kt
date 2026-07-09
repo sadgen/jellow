@@ -34,20 +34,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import androidx.compose.foundation.Image
 import dev.jdtech.jellyfin.core.R
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyEpisode
@@ -61,7 +58,6 @@ import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlin.math.roundToInt
 
 private fun FindroidItem.canUseTrickplay(): Boolean {
     return (this as? FindroidSources)?.trickplayInfo?.isNotEmpty() == true
@@ -90,8 +86,6 @@ fun ItemCard(
     var previewFrames by remember { mutableStateOf<List<Bitmap>>(emptyList()) }
     var previewFrameIndex by remember { mutableIntStateOf(0) }
     var previewDragAccum by remember { mutableFloatStateOf(0f) }
-    var previewPopupOffset by remember { mutableFloatStateOf(0f) }
-    val density = LocalDensity.current
 
     // 加载 trickplay 帧
     if (isPreviewShowing && previewFrames.isEmpty() && repository != null) {
@@ -113,10 +107,9 @@ fun ItemCard(
                 }
                 .pointerInput(item.id, repository) {
                     detectDragGesturesAfterLongPress(
-                        onDragStart = { offset ->
+                        onDragStart = {
                             if (item.canUseTrickplay() && repository != null) {
                                 isPreviewShowing = true
-                                previewPopupOffset = offset.x
                             } else {
                                 onLongClick?.invoke()
                             }
@@ -246,48 +239,34 @@ fun ItemCard(
             }
         }
 
-        // 悬浮 trickplay 小窗 — 像播放器进度条预览一样
         if (isPreviewShowing && previewFrames.isNotEmpty()) {
-            val popupTopOffset = with(density) { (-200).dp.roundToPx() }
-
-            Popup(
-                alignment = Alignment.TopCenter,
-                offset = IntOffset(0, popupTopOffset),
-                onDismissRequest = {
-                    isPreviewShowing = false
-                    previewFrames = emptyList()
-                },
-                properties = PopupProperties(
-                    focusable = false,
-                    dismissOnBackPress = false,
-                    dismissOnClickOutside = false,
-                ),
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .offset(y = (-170).dp)
+                    .width(280.dp)
+                    .height(160.dp)
+                    .clip(MaterialTheme.shapes.medium)
+                    .shadow(8.dp, MaterialTheme.shapes.medium)
+                    .background(Color.Black),
             ) {
-                Box(
+                val frame = previewFrames[previewFrameIndex]
+                Image(
+                    painter = BitmapPainter(frame.asImageBitmap()),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                Text(
+                    text = "${previewFrameIndex + 1}/${previewFrames.size}",
+                    color = Color.White.copy(alpha = 0.7f),
+                    style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier
-                        .width(280.dp)
-                        .height(160.dp)
-                        .clip(MaterialTheme.shapes.medium)
-                        .background(Color.Black)
-                ) {
-                    val frame = previewFrames[previewFrameIndex]
-                    Image(
-                        painter = BitmapPainter(frame.asImageBitmap()),
-                        contentDescription = null,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                    Text(
-                        text = "${previewFrameIndex + 1}/${previewFrames.size}",
-                        color = Color.White.copy(alpha = 0.7f),
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(4.dp)
-                            .background(Color.Black.copy(alpha = 0.5f))
-                            .padding(horizontal = 4.dp),
-                    )
-                }
+                        .align(Alignment.BottomCenter)
+                        .padding(4.dp)
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .padding(horizontal = 4.dp),
+                )
             }
         }
     }
