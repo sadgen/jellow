@@ -96,6 +96,7 @@ class PlayerActivity : BasePlayerActivity() {
     private val gyroController by lazy { StandardVideoGyroController() }
 
     private var lastBufferedPosition = 0L
+    private var lastCurrentPosition = 0L
     private var lastNetworkCheckTime = 0L
     private var totalBytesDownloaded = 0L
     private var currentDownloadSpeedMbps = 0.0
@@ -899,6 +900,17 @@ class PlayerActivity : BasePlayerActivity() {
             currentDownloadSpeedMbps = 0.0
             lastMediaId = currentMediaId
             lastBufferedPosition = bufferedPos
+            lastCurrentPosition = player.currentPosition
+            lastNetworkCheckTime = now
+            return
+        }
+
+        val currentPosition = player.currentPosition
+        val currentPosDelta = abs(currentPosition - lastCurrentPosition)
+
+        if (currentPosDelta > 5000) {
+            lastBufferedPosition = bufferedPos
+            lastCurrentPosition = currentPosition
             lastNetworkCheckTime = now
             return
         }
@@ -916,11 +928,11 @@ class PlayerActivity : BasePlayerActivity() {
             val timeDelta = (now - lastNetworkCheckTime) / 1000.0
 
             if (timeDelta > 0) {
-                val bitrate = player.currentTracks.groups
+                val formatBitrate = player.currentTracks.groups
                     .firstOrNull { it.type == C.TRACK_TYPE_VIDEO }
                     ?.mediaTrackGroup?.getFormat(0)?.bitrate?.toLong()
-                    ?: appPreferences.getValue(appPreferences.playerTranscodingBitrate)?.toLongOrNull()
-                    ?: 10_000_000L
+                val prefBitrate = appPreferences.getValue(appPreferences.playerTranscodingBitrate).toLong() * 1_000_000
+                val bitrate = formatBitrate ?: prefBitrate
                 val bytesDownloaded = ((bufferDelta / 1000.0) * (bitrate / 8.0)).toLong()
                 currentDownloadSpeedMbps = (bytesDownloaded * 8 / timeDelta) / 1_000_000.0
                 totalBytesDownloaded += bytesDownloaded
@@ -930,6 +942,7 @@ class PlayerActivity : BasePlayerActivity() {
         }
 
         lastBufferedPosition = bufferedPos
+        lastCurrentPosition = currentPosition
         lastNetworkCheckTime = now
 
         val networkSpeedView = binding.playerView.findViewById<TextView>(R.id.network_speed)

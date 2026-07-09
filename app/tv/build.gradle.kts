@@ -19,6 +19,8 @@ android {
 
         versionCode = Versions.APP_CODE
         versionName = Versions.APP_NAME
+
+        missingDimensionStrategy("variant", "libre")
     }
 
     signingConfigs {
@@ -52,6 +54,10 @@ android {
         register("libre") {
             dimension = "variant"
             isDefault = true
+        }
+        register("jellow") {
+            dimension = "variant"
+            versionNameSuffix = "-jellow"
         }
     }
 

@@ -23,6 +23,8 @@ android {
         versionName = Versions.APP_NAME
 
         testInstrumentationRunner = "dev.jdtech.jellyfin.HiltTestRunner"
+
+        missingDimensionStrategy("variant", "libre")
     }
 
     signingConfigs {
@@ -56,6 +58,10 @@ android {
         register("libre") {
             dimension = "variant"
             isDefault = true
+        }
+        register("jellow") {
+            dimension = "variant"
+            versionNameSuffix = "-jellow"
         }
     }
 

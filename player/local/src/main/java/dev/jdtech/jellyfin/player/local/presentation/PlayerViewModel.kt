@@ -402,7 +402,7 @@ constructor(
                                 currentChapters = item.chapters,
                                 fileLoaded = false,
                                 playMethod = item.playMethod,
-                                bitrate = item.bitrate,
+                                bitrate = item.bitrate?.toString(),
                             )
                         }
 
@@ -711,7 +711,7 @@ constructor(
     fun reloadWithBitrate(newBitrate: String) {
         viewModelScope.launch {
             try {
-                appPreferences.setValue(appPreferences.playerTranscodingBitrate, newBitrate)
+                appPreferences.setValue(appPreferences.playerTranscodingBitrate, newBitrate.toInt())
 
                 val position = player.currentPosition
                 val mediaId = player.currentMediaItem?.mediaId ?: return@launch
