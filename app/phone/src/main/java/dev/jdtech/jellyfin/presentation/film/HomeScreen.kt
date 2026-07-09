@@ -124,16 +124,6 @@ private fun HomeScreenLayout(state: HomeState, onAction: (HomeAction) -> Unit) {
                         modifier = Modifier.animateItem(),
                     )
                 }
-                state.latestSection?.let { section ->
-                    item(key = section.id) {
-                        HomeSection(
-                            section = section.homeSection,
-                            itemsPadding = itemsPadding,
-                            onAction = onAction,
-                            modifier = Modifier.animateItem(),
-                        )
-                    }
-                }
                 state.resumeSection?.let { section ->
                     item(key = section.id) {
                         HomeSection(
