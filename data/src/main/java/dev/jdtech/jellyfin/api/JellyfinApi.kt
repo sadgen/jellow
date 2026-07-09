@@ -23,6 +23,7 @@ import org.jellyfin.sdk.api.client.extensions.userApi
 import org.jellyfin.sdk.api.client.extensions.userLibraryApi
 import org.jellyfin.sdk.api.client.extensions.userViewsApi
 import org.jellyfin.sdk.api.client.extensions.videosApi
+import org.jellyfin.sdk.api.operations.PersonsApi
 import org.jellyfin.sdk.createJellyfin
 import org.jellyfin.sdk.model.ClientInfo
 
@@ -77,6 +78,7 @@ class JellyfinApi(
     val userLibraryApi = api.userLibraryApi
     val videosApi = api.videosApi
     val viewsApi = api.userViewsApi
+    val personsApi = PersonsApi(api)
 
     companion object {
         @Volatile private var INSTANCE: JellyfinApi? = null

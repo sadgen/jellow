@@ -97,54 +97,43 @@ fun ItemCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .width(width.dp)
             .clip(MaterialTheme.shapes.small)
-            .then(
-                if (isPreviewShowing) {
-                    Modifier.pointerInput(previewFrames.size) {
-                        detectDragGesturesAfterLongPress(
-                            onDragStart = { /* 按住后拖动 */ },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                previewDragAccum += dragAmount.x
-                                val total = previewFrames.size
-                                if (total > 0) {
-                                    val delta = (previewDragAccum / 40f).toInt()
-                                    previewFrameIndex =
-                                        ((previewFrameIndex + delta) % total + total) % total
-                                    previewDragAccum -= delta * 40f
-                                }
-                            },
-                            onDragEnd = {
-                                isPreviewShowing = false
-                                previewFrames = emptyList()
-                            },
-                            onDragCancel = {
-                                isPreviewShowing = false
-                                previewFrames = emptyList()
-                            },
-                        )
-                    }
-                } else {
-                    Modifier
-                        .pointerInput(item.id) {
-                            detectTapGestures(onTap = { onClick(item) })
+            .pointerInput(item.id) {
+                detectTapGestures(onTap = { onClick(item) })
+            }
+            .pointerInput(item.id, repository) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = {
+                        if (item.canUseTrickplay() && repository != null) {
+                            isPreviewShowing = true
+                        } else {
+                            onLongClick?.invoke()
                         }
-                        .pointerInput(item.id) {
-                            detectDragGesturesAfterLongPress(
-                                onDragStart = {
-                                    if (item.canUseTrickplay() && repository != null) {
-                                        isPreviewShowing = true
-                                    } else {
-                                        onLongClick?.invoke()
-                                    }
-                                },
-                                onDrag = { _, _ -> },
-                                onDragEnd = {},
-                                onDragCancel = {},
-                            )
+                    },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        if (isPreviewShowing && previewFrames.isNotEmpty()) {
+                            previewDragAccum += dragAmount.x
+                            val total = previewFrames.size
+                            if (total > 0) {
+                                val delta = (previewDragAccum / 40f).toInt()
+                                previewFrameIndex =
+                                    ((previewFrameIndex + delta) % total + total) % total
+                                previewDragAccum -= delta * 40f
+                            }
                         }
-                }
-            )
+                    },
+                    onDragEnd = {
+                        isPreviewShowing = false
+                        previewFrames = emptyList()
+                    },
+                    onDragCancel = {
+                        isPreviewShowing = false
+                        previewFrames = emptyList()
+                    },
+                )
+            }
             .then(if (selected) Modifier.clip(MaterialTheme.shapes.small) else Modifier),
     ) {
         Surface(

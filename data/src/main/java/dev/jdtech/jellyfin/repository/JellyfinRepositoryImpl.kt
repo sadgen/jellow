@@ -62,6 +62,7 @@ import org.jellyfin.sdk.model.api.TranscodingProfile
 import org.jellyfin.sdk.model.api.EncodingContext
 import org.jellyfin.sdk.model.api.MediaStreamProtocol
 import org.jellyfin.sdk.model.api.UserConfiguration
+import org.jellyfin.sdk.model.api.request.GetPersonsRequest
 import timber.log.Timber
 import kotlin.math.roundToInt
 
@@ -309,16 +310,13 @@ class JellyfinRepositoryImpl(
 
     override suspend fun getPersons(limit: Int): List<FindroidPerson> =
         withContext(Dispatchers.IO) {
-            jellyfinApi.itemsApi
-                .getItems(
-                    jellyfinApi.userId!!,
-                    includeItemTypes = listOf(BaseItemKind.PERSON),
-                    recursive = true,
-                    sortBy = listOf(ItemSortBy.fromName("ProductionYear")),
-                    sortOrder = listOf(ItemSortOrder.DESCENDING),
-                    limit = limit,
-                    fields = listOf(ItemFields.PRIMARY_IMAGE_ASPECT_RATIO),
-                )
+            val request = GetPersonsRequest(
+                limit = limit,
+                fields = listOf(ItemFields.PRIMARY_IMAGE_ASPECT_RATIO),
+                userId = jellyfinApi.userId,
+            )
+            jellyfinApi.personsApi
+                .getPersons(request)
                 .content
                 .items
                 .mapNotNull { it.toFindroidPerson(this@JellyfinRepositoryImpl) }
