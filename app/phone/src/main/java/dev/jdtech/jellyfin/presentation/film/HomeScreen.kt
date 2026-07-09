@@ -39,12 +39,14 @@ import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.presentation.components.ErrorDialog
 import dev.jdtech.jellyfin.presentation.film.components.HomeCarousel
 import dev.jdtech.jellyfin.presentation.film.components.HomeHeader
+import dev.jdtech.jellyfin.presentation.film.components.HomeLibraryFolders
 import dev.jdtech.jellyfin.presentation.film.components.HomeSection
 import dev.jdtech.jellyfin.presentation.film.components.HomeView
 import dev.jdtech.jellyfin.presentation.film.components.ServerSelectionBottomSheet
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.presentation.utils.rememberSafePadding
+import java.util.UUID
 import kotlinx.coroutines.launch
 
 @Composable
@@ -104,6 +106,16 @@ private fun HomeScreenLayout(state: HomeState, onAction: (HomeAction) -> Unit) {
                 contentPadding = PaddingValues(top = contentPaddingTop, bottom = paddingBottom),
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium),
             ) {
+                state.libraryFolders.takeIf { it.isNotEmpty() }?.let { folders ->
+                    item(key = UUID.nameUUIDFromBytes("library_folders".toByteArray())) {
+                        HomeLibraryFolders(
+                            folders = folders,
+                            itemsPadding = itemsPadding,
+                            onAction = onAction,
+                            modifier = Modifier.animateItem(),
+                        )
+                    }
+                }
                 items(state.views, key = { it.id }) { view ->
                     HomeView(
                         view = view,

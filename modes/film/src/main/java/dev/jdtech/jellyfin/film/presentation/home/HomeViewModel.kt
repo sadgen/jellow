@@ -6,6 +6,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.film.R as FilmR
 import dev.jdtech.jellyfin.models.CollectionType
+import dev.jdtech.jellyfin.models.FindroidCollection
+import dev.jdtech.jellyfin.models.FindroidImages
 import dev.jdtech.jellyfin.models.HomeItem
 import dev.jdtech.jellyfin.models.HomeSection
 import dev.jdtech.jellyfin.models.UiText
@@ -59,7 +61,8 @@ constructor(
                 val deferredResume = async { loadResumeItems() }
                 val deferredLatest = async { loadLatestItems() }
                 val deferredViews = async { loadViews() }
-                awaitAll(deferredSuggestions, deferredResume, deferredLatest, deferredViews)
+                val deferredFolders = async { loadLibraryFolders() }
+                awaitAll(deferredSuggestions, deferredResume, deferredLatest, deferredViews, deferredFolders)
             } catch (e: Exception) {
                 _state.emit(_state.value.copy(error = e))
             }
@@ -161,6 +164,28 @@ constructor(
             }
 
         _state.emit(_state.value.copy(views = items))
+    }
+
+    private suspend fun loadLibraryFolders() {
+        Timber.i("Loading library folders")
+        val folders =
+            repository
+                .getUserViews()
+                .mapNotNull { view ->
+                    val collectionType = CollectionType.fromString(view.collectionType?.serialName)
+                    if (collectionType in CollectionType.supported) {
+                        FindroidCollection(
+                            id = view.id,
+                            name = view.name.orEmpty(),
+                            type = collectionType,
+                            images = FindroidImages(),
+                        )
+                    } else {
+                        null
+                    }
+                }
+
+        _state.emit(_state.value.copy(libraryFolders = folders))
     }
 
     fun onAction(action: HomeAction) {
