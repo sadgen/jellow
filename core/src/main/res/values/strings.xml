@@ -64,6 +64,9 @@
     <string name="sort_by_options_4">Date Played</string>
     <string name="sort_by_options_5">Release Date</string>
     <string name="sort_by_options_6">Random</string>
+    <string name="sort_by_options_7">Playtime</string>
+    <string name="sort_by_options_8">Play Count</string>
+    <string name="sort_by_options_9">Last Played Date</string>
     <string name="ascending">Ascending</string>
     <string name="descending">Descending</string>
     <string name="runtime_minutes">%1$d mins</string>
