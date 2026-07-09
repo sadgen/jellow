@@ -11,6 +11,8 @@ sealed interface PersonAction {
 
     data class NavigateToItem(val item: FindroidItem) : PersonAction
 
+    data class OnPlayClick(val item: FindroidItem) : PersonAction
+
     data object ToggleViewMode : PersonAction
 
     data class UpdateSort(val sortBy: SortBy, val sortOrder: SortOrder) : PersonAction

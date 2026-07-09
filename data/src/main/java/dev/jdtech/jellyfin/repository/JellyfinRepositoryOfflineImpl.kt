@@ -167,6 +167,10 @@ class JellyfinRepositoryOfflineImpl(
         return emptyList()
     }
 
+    override suspend fun getPersons(limit: Int): List<FindroidPerson> {
+        return emptyList()
+    }
+
     override suspend fun getSeasons(seriesId: UUID, offline: Boolean): List<FindroidSeason> =
         withContext(Dispatchers.IO) {
             database.getSeasonsByShowId(seriesId).map {

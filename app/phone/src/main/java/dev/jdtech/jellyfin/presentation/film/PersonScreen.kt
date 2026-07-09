@@ -67,6 +67,7 @@ fun PersonScreen(
     navigateBack: () -> Unit,
     navigateHome: () -> Unit,
     navigateToItem: (item: FindroidItem) -> Unit,
+    onPlayClick: (FindroidItem) -> Unit = {},
     viewModel: PersonViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -80,6 +81,7 @@ fun PersonScreen(
                 is PersonAction.NavigateBack -> navigateBack()
                 is PersonAction.NavigateHome -> navigateHome()
                 is PersonAction.NavigateToItem -> navigateToItem(action.item)
+                is PersonAction.OnPlayClick -> onPlayClick(action.item)
                 else -> Unit
             }
             viewModel.onAction(action)
@@ -175,6 +177,7 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
                             items = state.starredInMovies,
                             isListView = state.isListView,
                             onItemClick = { onAction(PersonAction.NavigateToItem(it)) },
+                            onPlayClick = { onAction(PersonAction.OnPlayClick(it)) },
                         )
                     }
 
@@ -188,6 +191,7 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
                             items = state.starredInShows,
                             isListView = state.isListView,
                             onItemClick = { onAction(PersonAction.NavigateToItem(it)) },
+                            onPlayClick = { onAction(PersonAction.OnPlayClick(it)) },
                         )
                     }
                 }
@@ -223,6 +227,7 @@ private fun PersonItemGrid(
     items: List<FindroidItem>,
     isListView: Boolean,
     onItemClick: (FindroidItem) -> Unit,
+    onPlayClick: (FindroidItem) -> Unit = {},
 ) {
     val columnCount = if (isListView) 2 else 3
     Column(
@@ -238,6 +243,7 @@ private fun PersonItemGrid(
                         item = item,
                         direction = if (isListView) Direction.HORIZONTAL else Direction.VERTICAL,
                         onClick = { onItemClick(item) },
+                        onPlayClick = { onPlayClick(item) },
                         modifier = Modifier.weight(1f),
                     )
                 }

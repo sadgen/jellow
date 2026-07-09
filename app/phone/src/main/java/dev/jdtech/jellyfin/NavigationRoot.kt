@@ -333,6 +333,9 @@ fun NavigationRoot(
                         intent.putExtra("itemKind", itemKind?.serialName ?: "")
                         context.startActivity(intent)
                     },
+                    onPersonClick = { personId ->
+                        navController.safeNavigate(PersonRoute(personId.toString()))
+                    },
                 )
             }
             composable<MediaRoute> {
@@ -460,12 +463,28 @@ fun NavigationRoot(
             }
             composable<PersonRoute> { backStackEntry ->
                 val route: PersonRoute = backStackEntry.toRoute()
+                val context = LocalContext.current
                 PersonScreen(
                     personId = UUID.fromString(route.personId),
                     navigateBack = { navController.safePopBackStack() },
                     navigateHome = { navigateHome(navController) },
                     navigateToItem = { item ->
                         navigateToItem(navController = navController, item = item)
+                    },
+                    onPlayClick = { item ->
+                        val itemKind = when (item) {
+                            is FindroidMovie -> BaseItemKind.MOVIE
+                            is FindroidEpisode -> BaseItemKind.EPISODE
+                            is FindroidSeason -> BaseItemKind.SEASON
+                            is FindroidShow -> BaseItemKind.SERIES
+                            is FindroidBoxSet -> BaseItemKind.BOX_SET
+                            is FindroidFolder -> BaseItemKind.FOLDER
+                            else -> null
+                        }
+                        val intent = Intent(context, PlayerActivity::class.java)
+                        intent.putExtra("itemId", item.id.toString())
+                        intent.putExtra("itemKind", itemKind?.serialName ?: "")
+                        context.startActivity(intent)
                     },
                 )
             }

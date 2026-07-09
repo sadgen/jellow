@@ -82,6 +82,8 @@ interface JellyfinRepository {
 
     suspend fun getLatestMedia(parentId: UUID): List<FindroidItem>
 
+    suspend fun getPersons(limit: Int = 20): List<FindroidPerson>
+
     suspend fun getSeasons(seriesId: UUID, offline: Boolean = false): List<FindroidSeason>
 
     suspend fun getNextUp(seriesId: UUID? = null): List<FindroidEpisode>

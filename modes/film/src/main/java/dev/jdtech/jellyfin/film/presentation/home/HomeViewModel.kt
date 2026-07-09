@@ -38,15 +38,12 @@ constructor(
 
     private val uuidSuggestions = UUID.fromString("31e47044-9b79-4bb0-99d0-0e477ed65420")
     private val uuidContinueWatching =
-        UUID(4937169328197226115, -4704919157662094443) // 44845958-8326-4e83-beb4-c4f42e9eeb95
+        UUID(4937169328197226115, -4704919157662094443)
     private val uuidNextUp =
-        UUID(1783371395749072194, -6164625418200444295) // 18bfced5-f237-4d42-aa72-d9d7fed19279
-    private val uuidLatest =
-        UUID(7893371395749072195, -5164625418200444296) // latest items section
+        UUID(1783371395749072194, -6164625418200444295)
 
     private val uiTextContinueWatching = UiText.StringResource(FilmR.string.continue_watching)
     private val uiTextNextUp = UiText.StringResource(FilmR.string.next_up)
-    private val uiTextLatest = UiText.DynamicString("最新添加")
 
     fun loadData() {
         Timber.i("Loading data")
@@ -58,12 +55,22 @@ constructor(
                 }
 
                 // 并行加载首页各模块，加速加载
-                val deferredSuggestions = async { loadSuggestions() }
-                val deferredResume = async { loadResumeItems() }
-                val deferredLatest = async { loadLatestItems() }
-                val deferredViews = async { loadViews() }
-                val deferredFolders = async { loadLibraryFolders() }
-                awaitAll(deferredSuggestions, deferredResume, deferredLatest, deferredViews, deferredFolders)
+                val deferredSuggestions = async { 
+                    try { loadSuggestions() } catch (e: Exception) { Timber.e(e, "loadSuggestions failed") }
+                }
+                val deferredResume = async { 
+                    try { loadResumeItems() } catch (e: Exception) { Timber.e(e, "loadResumeItems failed") }
+                }
+                val deferredPersons = async { 
+                    try { loadPersons() } catch (e: Exception) { Timber.e(e, "loadPersons failed") }
+                }
+                val deferredViews = async { 
+                    try { loadViews() } catch (e: Exception) { Timber.e(e, "loadViews failed") }
+                }
+                val deferredFolders = async { 
+                    try { loadLibraryFolders() } catch (e: Exception) { Timber.e(e, "loadLibraryFolders failed") }
+                }
+                awaitAll(deferredSuggestions, deferredResume, deferredPersons, deferredViews, deferredFolders)
             } catch (e: Exception) {
                 _state.emit(_state.value.copy(error = e))
             }
@@ -118,13 +125,19 @@ constructor(
         _state.emit(_state.value.copy(resumeSection = section))
     }
 
-    private suspend fun loadLatestItems() {
-        Timber.i("Loading latest items")
-        if (!appPreferences.getValue(appPreferences.homeLatest)) {
-            _state.emit(_state.value.copy(latestSection = null))
-            return
+    private suspend fun loadPersons() {
+        Timber.i("Loading persons")
+        try {
+            val persons = repository.getPersons(limit = 30)
+            _state.emit(_state.value.copy(persons = persons))
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to load persons")
+            _state.emit(_state.value.copy(persons = emptyList()))
         }
+    }
 
+    private suspend fun loadViews() {
+        Timber.i("Loading views")
         val items =
             repository
                 .getUserViews()
@@ -132,37 +145,10 @@ constructor(
                     CollectionType.fromString(view.collectionType?.serialName) in
                         CollectionType.supported
                 }
-                .flatMap { view -> repository.getLatestMedia(view.id) }
-                .distinctBy { it.id }
-                .take(20)
-
-        val section =
-            if (items.isEmpty()) {
-                null
-            } else {
-                HomeItem.Section(HomeSection(uuidLatest, uiTextLatest, items))
-            }
-
-        _state.emit(_state.value.copy(latestSection = section))
-    }
-
-    private suspend fun loadViews() {
-        Timber.i("Loading views")
-        val items =
-            if (appPreferences.getValue(appPreferences.homeLatest)) {
-                repository
-                    .getUserViews()
-                    .filter { view ->
-                        CollectionType.fromString(view.collectionType?.serialName) in
-                            CollectionType.supported
-                    }
-                    .map { view -> view to repository.getLatestMedia(view.id) }
-                    .filter { (_, latest) -> latest.isNotEmpty() }
-                    .map { (view, latest) -> view.toView(latest) }
-                    .map { HomeItem.ViewItem(it) }
-            } else {
-                emptyList()
-            }
+                .map { view -> view to repository.getLatestMedia(view.id) }
+                .filter { (_, latest) -> latest.isNotEmpty() }
+                .map { (view, latest) -> view.toView(latest) }
+                .map { HomeItem.ViewItem(it) }
 
         _state.emit(_state.value.copy(views = items))
     }

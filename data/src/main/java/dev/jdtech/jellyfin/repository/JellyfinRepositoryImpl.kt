@@ -302,9 +302,26 @@ class JellyfinRepositoryImpl(
     override suspend fun getLatestMedia(parentId: UUID): List<FindroidItem> =
         withContext(Dispatchers.IO) {
             jellyfinApi.userLibraryApi
-                .getLatestMedia(jellyfinApi.userId!!, parentId = parentId, limit = 16)
+                .getLatestMedia(jellyfinApi.userId!!, parentId = parentId, limit = 20)
                 .content
                 .mapNotNull { it.toFindroidItem(this@JellyfinRepositoryImpl, database) }
+        }
+
+    override suspend fun getPersons(limit: Int): List<FindroidPerson> =
+        withContext(Dispatchers.IO) {
+            jellyfinApi.itemsApi
+                .getItems(
+                    jellyfinApi.userId!!,
+                    includeItemTypes = listOf(BaseItemKind.PERSON),
+                    recursive = true,
+                    sortBy = listOf(ItemSortBy.fromName("ProductionYear")),
+                    sortOrder = listOf(ItemSortOrder.DESCENDING),
+                    limit = limit,
+                    fields = listOf(ItemFields.PRIMARY_IMAGE_ASPECT_RATIO),
+                )
+                .content
+                .items
+                .mapNotNull { it.toFindroidPerson(this@JellyfinRepositoryImpl) }
         }
 
     override suspend fun getSeasons(seriesId: UUID, offline: Boolean): List<FindroidSeason> =
