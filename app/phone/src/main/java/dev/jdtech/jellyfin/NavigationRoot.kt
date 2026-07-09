@@ -150,11 +150,7 @@ fun NavigationRoot(
             else -> WelcomeRoute
         }
 
-    val navigationItems =
-        when (isOfflineMode) {
-            false -> listOf(homeTab, mediaTab, downloadsTab)
-            true -> listOf(homeTab, downloadsTab)
-        }
+    val navigationItems = listOf(homeTab, downloadsTab)
     val navigationItemClassNames = navigationItems.map { it.route::class.qualifiedName }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
