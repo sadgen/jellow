@@ -48,6 +48,9 @@
     <string name="sort_by_options_4">播放日期</string>
     <string name="sort_by_options_5">发行日期</string>
     <string name="sort_by_options_6">随机</string>
+    <string name="sort_by_options_7">播放时长</string>
+    <string name="sort_by_options_8">播放次数</string>
+    <string name="sort_by_options_9">上次播放</string>
     <string name="descending">降序</string>
     <string name="runtime_minutes">%1$d 分钟</string>
     <string name="select_video_version_title">选择版本</string>

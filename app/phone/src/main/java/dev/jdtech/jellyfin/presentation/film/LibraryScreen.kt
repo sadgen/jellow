@@ -165,10 +165,12 @@ private fun LibraryScreenLayout(
                             )
                         }
                     }
-                    IconButton(onClick = { onAction(LibraryAction.OnRefresh) }) {
+                    IconButton(onClick = { onAction(LibraryAction.ToggleDuplicateFinder) }) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_rotate_ccw),
+                            painter = painterResource(if (state.showOnlyDuplicates) R.drawable.ic_check else R.drawable.ic_sparkles),
                             contentDescription = null,
+                            tint = if (state.showOnlyDuplicates) MaterialTheme.colorScheme.primary 
+                                   else MaterialTheme.colorScheme.onSurface,
                         )
                     }
                     
