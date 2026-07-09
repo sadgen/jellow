@@ -325,7 +325,7 @@ class PlayerGestureHelper(
 
                     if (abs(distanceY / distanceX) < 2) return false
 
-                    if (swipeGestureValueTrackerProgress > -1 || swipeGestureProgressOpen || swipeGestureValueTrackerZoom > -1) {
+                    if (swipeGestureValueTrackerProgress > -1 || swipeGestureProgressOpen) {
                         return false
                     }
 
@@ -334,31 +334,14 @@ class PlayerGestureHelper(
                     // Distance to swipe to go from min to max
                     val distanceFull =
                         playerView.measuredHeight * Constants.FULL_SWIPE_RANGE_SCREEN_RATIO
-                    val ratioChange = distanceY / distanceFull
 
+                    // 对于右侧缩放，直接用 accumulated distanceY 计算更精确
                     if (firstEvent.x.toInt() > viewCenterX) {
-                        if (swipeGestureValueTrackerZoom == -1f) {
-                            swipeGestureValueTrackerZoom = if (playerView.player is MPVPlayer) {
-                                (playerView.player as MPVPlayer).getZoomLevel()
-                            } else {
-                                if (isZoomEnabled) 1f else 0f
-                            }
-                        }
-                        swipeGestureValueTrackerZoom = (swipeGestureValueTrackerZoom + ratioChange).coerceIn(0f, 1f)
-                        val process = (swipeGestureValueTrackerZoom * 100).toInt()
-                        if (playerView.player is MPVPlayer) {
-                            (playerView.player as MPVPlayer).setZoomLevel(swipeGestureValueTrackerZoom)
-                        } else {
-                            updateZoomMode(swipeGestureValueTrackerZoom > 0.5f)
-                        }
-                        activity.binding.gestureVolumeLayout.visibility = View.VISIBLE
-                        activity.binding.gestureVolumeProgressBar.max = 100
-                        activity.binding.gestureVolumeProgressBar.progress = process
-                        activity.binding.gestureVolumeText.text = "$process%"
-                        activity.binding.gestureVolumeImage.setImageResource(android.R.drawable.ic_menu_search)
-                        swipeGestureVolumeOpen = true
+                        processZoomGesture(firstEvent, currentEvent, distanceFull)
+                        return true
                     } else {
                         // Swiping on the left, change brightness
+                        val ratioChange = distanceY / distanceFull
                         val window = activity.window
                         val brightnessRange = BRIGHTNESS_OVERRIDE_OFF..BRIGHTNESS_OVERRIDE_FULL
 
@@ -402,6 +385,36 @@ class PlayerGestureHelper(
                 }
             },
         )
+
+    private fun processZoomGesture(
+        firstEvent: MotionEvent,
+        currentEvent: MotionEvent,
+        distanceFull: Float,
+    ) {
+        val totalDeltaY = firstEvent.y - currentEvent.y
+        val ratioChange = totalDeltaY / distanceFull
+        
+        if (swipeGestureValueTrackerZoom == -1f) {
+            swipeGestureValueTrackerZoom = if (playerView.player is MPVPlayer) {
+                (playerView.player as MPVPlayer).getZoomLevel()
+            } else {
+                if (isZoomEnabled) 1f else 0f
+            }
+        }
+        swipeGestureValueTrackerZoom = (swipeGestureValueTrackerZoom + ratioChange).coerceIn(0f, 1f)
+        val process = (swipeGestureValueTrackerZoom * 100).toInt()
+        if (playerView.player is MPVPlayer) {
+            (playerView.player as MPVPlayer).setZoomLevel(swipeGestureValueTrackerZoom)
+        } else {
+            updateZoomMode(swipeGestureValueTrackerZoom > 0.5f)
+        }
+        activity.binding.gestureVolumeLayout.visibility = View.VISIBLE
+        activity.binding.gestureVolumeProgressBar.max = 100
+        activity.binding.gestureVolumeProgressBar.progress = process
+        activity.binding.gestureVolumeText.text = "$process%"
+        activity.binding.gestureVolumeImage.setImageResource(android.R.drawable.ic_menu_search)
+        swipeGestureVolumeOpen = true
+    }
 
     private val hideGestureVolumeIndicatorOverlayAction = Runnable {
         activity.binding.gestureVolumeLayout.visibility = View.GONE

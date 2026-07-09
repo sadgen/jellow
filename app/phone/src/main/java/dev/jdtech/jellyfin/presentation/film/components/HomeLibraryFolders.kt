@@ -40,7 +40,7 @@ fun HomeLibraryFolders(
             items(folders, key = { it.id }) { folder ->
                 ItemCard(
                     item = folder,
-                    direction = Direction.VERTICAL,
+                    direction = Direction.HORIZONTAL,
                     onClick = { onAction(HomeAction.OnLibraryClick(folder)) },
                 )
             }

@@ -8,6 +8,7 @@ data class HomeState(
     val server: Server? = null,
     val suggestionsSection: HomeItem.Suggestions? = null,
     val resumeSection: HomeItem.Section? = null,
+    val latestSection: HomeItem.Section? = null,
     val views: List<HomeItem.ViewItem> = emptyList(),
     val libraryFolders: List<FindroidCollection> = emptyList(),
     val isLoading: Boolean = false,
