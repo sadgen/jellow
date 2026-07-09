@@ -76,6 +76,7 @@ fun PersonScreen(
                 is PersonAction.NavigateToItem -> navigateToItem(action.item)
                 else -> Unit
             }
+            viewModel.onAction(action)
         },
     )
 }
@@ -172,7 +173,7 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
                                     direction = if (state.isListView) Direction.HORIZONTAL else Direction.VERTICAL,
                                     onClick = { onAction(PersonAction.NavigateToItem(item)) },
                                     modifier = Modifier
-                                        .fillMaxWidth(if (state.isListView) 1f else 0.5f),
+                                        .fillMaxWidth(if (state.isListView) 0.5f else 0.33f),
                                 )
                             }
                         }
@@ -194,7 +195,7 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
                                     direction = if (state.isListView) Direction.HORIZONTAL else Direction.VERTICAL,
                                     onClick = { onAction(PersonAction.NavigateToItem(item)) },
                                     modifier = Modifier
-                                        .fillMaxWidth(if (state.isListView) 1f else 0.5f),
+                                        .fillMaxWidth(if (state.isListView) 0.5f else 0.33f),
                                 )
                             }
                         }
