@@ -1,5 +1,6 @@
 package dev.jdtech.jellyfin
 
+import android.content.Intent
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.tween
@@ -18,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
@@ -335,12 +337,18 @@ fun NavigationRoot(
             }
             composable<LibraryRoute> { backStackEntry ->
                 val route: LibraryRoute = backStackEntry.toRoute()
+                val context = LocalContext.current
                 LibraryScreen(
                     libraryId = UUID.fromString(route.libraryId),
                     libraryName = route.libraryName,
                     libraryType = route.libraryType,
                     onItemClick = { item ->
                         navigateToItem(navController = navController, item = item)
+                    },
+                    onPlayClick = { item ->
+                        val intent = Intent(context, PlayerActivity::class.java)
+                        intent.putExtra("itemId", item.id.toString())
+                        context.startActivity(intent)
                     },
                     navigateBack = { navController.safePopBackStack() },
                 )

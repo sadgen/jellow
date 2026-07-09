@@ -712,6 +712,11 @@ constructor(
         viewModelScope.launch {
             try {
                 appPreferences.setValue(appPreferences.playerTranscodingBitrate, newBitrate.toInt())
+                // Also sync to the new string preference (convert bps to Mbps)
+                val mbps = (newBitrate.toLongOrNull()?.div(1_000_000f))?.let { "%.1f".format(it) }
+                if (mbps != null) {
+                    appPreferences.setValue(appPreferences.playerTranscodingBitrateSelect, mbps)
+                }
 
                 val position = player.currentPosition
                 val mediaId = player.currentMediaItem?.mediaId ?: return@launch

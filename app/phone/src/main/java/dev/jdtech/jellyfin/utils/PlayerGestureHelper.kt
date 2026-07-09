@@ -35,12 +35,11 @@ import kotlin.math.abs
 import kotlinx.coroutines.Dispatchers
 import timber.log.Timber
 
-// 扩展函数，将dp转换为px
 private val Float.dp: Float
-    get() = this * Resources.getSystem().displayMetrics.density
+    get() = this * android.content.res.Resources.getSystem().displayMetrics.density
 
 private val Int.dp: Int
-    get() = (this * Resources.getSystem().displayMetrics.density).toInt()
+    get() = (this * android.content.res.Resources.getSystem().displayMetrics.density).toInt()
 
 class PlayerGestureHelper(
     private val appPreferences: AppPreferences,

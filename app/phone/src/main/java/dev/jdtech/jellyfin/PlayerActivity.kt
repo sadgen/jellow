@@ -551,6 +551,8 @@ class PlayerActivity : BasePlayerActivity() {
         val playbackInfoContainer = binding.playerView.findViewById<View>(R.id.playback_info_container)
         playbackInfoContainer.setOnClickListener {
             val bitrateOptions = listOf(
+                "300 Kbps" to "300000",
+                "500 Kbps" to "500000",
                 "1 Mbps" to "1000000",
                 "2 Mbps" to "2000000",
                 "4 Mbps" to "4000000",
@@ -736,8 +738,8 @@ class PlayerActivity : BasePlayerActivity() {
     }
 
     private fun applyPortraitUIAdjustments() {
-        val progressContainer = binding.playerView.findViewById<LinearLayout>(R.id.progress_container) ?: return
-        val playbackControls = binding.playerView.findViewById<LinearLayout>(R.id.playback_controls_container) ?: return
+        val progressContainer = binding.playerView.findViewById<View>(R.id.progress_bar_container) ?: return
+        val playbackControls = binding.playerView.findViewById<View>(R.id.bottom_controls_container) ?: return
         val currentOrientation = resources.configuration.orientation
         
         val progressParams = progressContainer.layoutParams as FrameLayout.LayoutParams
@@ -1262,7 +1264,8 @@ private inner class StandardVideoGyroController : SensorEventListener {
                 ((renderedHeight - viewHeight) / 2.0) / renderedHeight.toDouble()
             } else 0.0
         }
-    
+    }
+
     /**
      * Update the position of the progress bar based on screen orientation
      * Since controls are now at the bottom, we don't need to adjust the position

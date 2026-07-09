@@ -47,6 +47,10 @@ import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.MediaType
 import org.jellyfin.sdk.model.api.PlayMethod
 import org.jellyfin.sdk.model.api.PlaybackInfoDto
+import org.jellyfin.sdk.model.api.PlaybackOrder
+import org.jellyfin.sdk.model.api.PlaybackProgressInfo
+import org.jellyfin.sdk.model.api.PlaybackStartInfo
+import org.jellyfin.sdk.model.api.PlaybackStopInfo
 import org.jellyfin.sdk.model.api.PlayAccess
 import org.jellyfin.sdk.model.api.PublicSystemInfo
 import org.jellyfin.sdk.model.api.RepeatMode
@@ -59,6 +63,18 @@ import org.jellyfin.sdk.model.api.EncodingContext
 import org.jellyfin.sdk.model.api.MediaStreamProtocol
 import org.jellyfin.sdk.model.api.UserConfiguration
 import timber.log.Timber
+import kotlin.math.roundToInt
+
+// Helper to get transcoding bitrate in bps, checking both new (string) and old (int) preferences
+fun getTranscodingBitrateBps(prefs: AppPreferences): Int {
+    // Try the new string preference first (from dropdown selector)
+    val stringValue = prefs.getValue(prefs.playerTranscodingBitrateSelect)
+    if (stringValue != null && stringValue.toFloatOrNull() != null) {
+        return (stringValue.toFloat() * 1_000_000f).roundToInt()
+    }
+    // Fall back to the old int preference (from in-player dialog)
+    return prefs.getValue(prefs.playerTranscodingBitrate) * 1_000_000
+}
 
 class JellyfinRepositoryImpl(
     private val context: Context,
@@ -358,7 +374,7 @@ class JellyfinRepositoryImpl(
                             userId = jellyfinApi.userId!!,
                             deviceProfile =
                                 if (forceTranscode || appPreferences.getValue(appPreferences.playerTranscoding)) {
-                                    val bitrate = appPreferences.getValue(appPreferences.playerTranscodingBitrate) * 1_000_000
+                                    val bitrate = getTranscodingBitrateBps(appPreferences)
                                     DeviceProfile(
                                         name = "Android Transcode",
                                         maxStaticBitrate = 0,
@@ -422,7 +438,7 @@ class JellyfinRepositoryImpl(
                                     )
                                 },
                             maxStreamingBitrate = if (forceTranscode || appPreferences.getValue(appPreferences.playerTranscoding)) {
-                                appPreferences.getValue(appPreferences.playerTranscodingBitrate) * 1_000_000
+                                getTranscodingBitrateBps(appPreferences)
                             } else {
                                 1_000_000_000
                             },

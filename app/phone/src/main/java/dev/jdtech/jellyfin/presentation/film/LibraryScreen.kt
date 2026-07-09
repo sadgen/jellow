@@ -67,11 +67,11 @@ import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.presentation.utils.GridCellsAdaptiveWithMinColumns
 import dev.jdtech.jellyfin.presentation.utils.plus
+import dev.jdtech.jellyfin.repository.JellyfinRepository
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import org.jellyfin.sdk.model.api.BaseItemKind
-import java.util.UUID
 
 @Composable
 fun LibraryScreen(
@@ -80,6 +80,7 @@ fun LibraryScreen(
     libraryType: CollectionType,
     onItemClick: (item: FindroidItem) -> Unit,
     navigateBack: () -> Unit,
+    onPlayClick: (item: FindroidItem) -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -116,6 +117,7 @@ fun LibraryScreen(
         onAction = { action ->
             when (action) {
                 is LibraryAction.OnItemClick -> onItemClick(action.item)
+                is LibraryAction.OnPlayClick -> onPlayClick(action.item)
                 is LibraryAction.OnBackClick -> navigateBack()
                 else -> Unit
             }
@@ -327,7 +329,7 @@ private fun LibraryScreenLayout(
                 onAction(LibraryAction.ChangeSorting(sortBy, sortOrder))
             },
             onToggleShowOnlyDuplicates = {
-                onAction(LibraryAction.OnToggleShowOnlyDuplicates)
+                onAction(LibraryAction.ToggleDuplicateFinder)
             },
             onDismissRequest = {
                 showSortByDialog = false

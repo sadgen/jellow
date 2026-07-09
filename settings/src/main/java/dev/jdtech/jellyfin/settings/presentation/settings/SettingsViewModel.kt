@@ -44,11 +44,12 @@ class SettingsViewModel @Inject constructor(private val appPreferences: AppPrefe
                             supportedDeviceTypes = listOf(DeviceType.PHONE),
                             backendPreference = appPreferences.playerTranscoding,
                         ),
-                        PreferenceIntInput(
+                        PreferenceSelect(
                             nameStringResource = R.string.pref_player_transcoding_bitrate,
                             dependencies = listOf(appPreferences.playerTranscoding),
-                            backendPreference = appPreferences.playerTranscodingBitrate,
-                            suffixRes = R.string.mbps,
+                            backendPreference = appPreferences.playerTranscodingBitrateSelect,
+                            options = R.array.transcoding_bitrate,
+                            optionValues = R.array.transcoding_bitrate_values,
                             supportedDeviceTypes = listOf(DeviceType.PHONE),
                         ),
                         PreferenceSwitch(

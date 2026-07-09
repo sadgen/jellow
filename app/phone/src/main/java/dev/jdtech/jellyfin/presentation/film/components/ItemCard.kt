@@ -2,7 +2,9 @@ package dev.jdtech.jellyfin.presentation.film.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,7 +31,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -63,7 +68,6 @@ fun ItemCard(
     isDuplicate: Boolean = false,
     modifier: Modifier = Modifier,
     repository: JellyfinRepository? = null,
-    onPlayClick: ((FindroidItem) -> Unit)? = null,
 ) {
     val width =
         when (direction) {
@@ -118,7 +122,7 @@ fun ItemCard(
                 }
                 Row(
                     modifier =
-                        Modifier.align(Alignment.TopEnd).padding(MaterialTheme.spacings.small),
+                        Modifier.align(Alignment.TopStart).padding(MaterialTheme.spacings.small),
                     horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
                 ) {
                     if (item.isDownloaded()) DownloadedBadge()
@@ -262,42 +266,3 @@ private fun ItemCardPreviewEpisodeVertical() {
     FindroidTheme { ItemCard(item = dummyEpisode, direction = Direction.VERTICAL, onClick = {}) }
 }
 
-suspend fun PointerInputScope.detectDragGesturesAfterShortLongPress(
-    onDragStart: (Offset) -> Unit = { },
-    onDragEnd: (Offset) -> Unit = { },
-    onDragCancel: () -> Unit = { },
-    onDrag: (change: PointerInputChange, dragAmount: Offset) -> Unit
-) {
-    awaitEachGesture {
-        val down = awaitFirstDown(requireUnconsumed = false)
-        // AwaitPointerEventScope.withTimeoutOrNull returns null on timeout
-        val timeoutReached = withTimeoutOrNull(200) {
-            while (true) {
-                val event = awaitPointerEvent()
-                if (event.changes.any { it.changedToUp() && it.id == down.id }) {
-                    // Finger lifted before timeout
-                    return@withTimeoutOrNull true
-                }
-                if (event.changes.any { it.positionChange() != Offset.Zero && it.id == down.id }) {
-                    // Finger moved too much
-                    return@withTimeoutOrNull true
-                }
-            }
-        } == null
-
-        if (timeoutReached) {
-            // Timeout reached! Finger is still down and hasn't moved significantly.
-            onDragStart.invoke(down.position)
-            if (
-                drag(down.id) {
-                    onDrag(it, it.positionChange())
-                    it.consume()
-                }
-            ) {
-                onDragEnd.invoke(down.position)
-            } else {
-                onDragCancel.invoke()
-            }
-        }
-    }
-}

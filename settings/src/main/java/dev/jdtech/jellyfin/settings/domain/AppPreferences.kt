@@ -36,6 +36,7 @@ class AppPreferences @Inject constructor(val sharedPreferences: SharedPreference
     // Player - transcoding
     val playerTranscoding = Preference("pref_player_transcoding", false)
     val playerTranscodingBitrate = Preference("pref_player_transcoding_bitrate", 10)
+    val playerTranscodingBitrateSelect = Preference("pref_player_transcoding_bitrate_select", "10")
 
     // Player - gestures
     val playerGestures = Preference("pref_player_gestures", true)

@@ -52,4 +52,26 @@
         <item>COMMERCIAL</item>
         <item>UNKNOWN</item>
     </string-array>
+    <string-array name="transcoding_bitrate">
+        <item>300 Kbps</item>
+        <item>500 Kbps</item>
+        <item>1 Mbps</item>
+        <item>2 Mbps</item>
+        <item>5 Mbps</item>
+        <item>10 Mbps</item>
+        <item>20 Mbps</item>
+        <item>50 Mbps</item>
+        <item>100 Mbps</item>
+    </string-array>
+    <string-array name="transcoding_bitrate_values">
+        <item>0.3</item>
+        <item>0.5</item>
+        <item>1</item>
+        <item>2</item>
+        <item>5</item>
+        <item>10</item>
+        <item>20</item>
+        <item>50</item>
+        <item>100</item>
+    </string-array>
 </resources>

@@ -13,6 +13,8 @@ import dev.jdtech.jellyfin.models.SortBy
 import dev.jdtech.jellyfin.models.SortOrder
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
+import java.util.UUID
+import javax.inject.Inject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -335,7 +337,7 @@ constructor(
                     ))
                 }
             }
-            is LibraryAction.OnToggleShowOnlyDuplicates -> {
+            is LibraryAction.ToggleDuplicateFinder -> {
                 viewModelScope.launch {
                     val newShowOnlyDuplicates = !_state.value.showOnlyDuplicates
                     _state.emit(_state.value.copy(showOnlyDuplicates = newShowOnlyDuplicates))

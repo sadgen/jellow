@@ -36,6 +36,5 @@ fun BaseItemDto.toFindroidCollection(jellyfinRepository: JellyfinRepository): Fi
         type = type,
         playCount = userData?.playCount ?: 0,
         images = toFindroidImages(jellyfinRepository),
-        playCount = userData?.playCount ?: 0,
     )
 }

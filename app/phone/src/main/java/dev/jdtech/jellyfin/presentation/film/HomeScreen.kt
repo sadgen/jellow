@@ -102,14 +102,13 @@ private fun HomeScreenLayout(state: HomeState, onAction: (HomeAction) -> Unit) {
                 contentPadding = PaddingValues(top = contentPaddingTop, bottom = paddingBottom),
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium),
             ) {
-                state.suggestionsSection?.let { section ->
-                    item(key = section.id) {
-                        HomeCarousel(
-                            items = section.items,
-                            itemsPadding = itemsPadding,
-                            onAction = onAction,
-                        )
-                    }
+                items(state.views, key = { it.id }) { view ->
+                    HomeView(
+                        view = view,
+                        itemsPadding = itemsPadding,
+                        onAction = onAction,
+                        modifier = Modifier.animateItem(),
+                    )
                 }
                 state.resumeSection?.let { section ->
                     item(key = section.id) {
@@ -130,14 +129,6 @@ private fun HomeScreenLayout(state: HomeState, onAction: (HomeAction) -> Unit) {
                             modifier = Modifier.animateItem(),
                         )
                     }
-                }
-                items(state.views, key = { it.id }) { view ->
-                    HomeView(
-                        view = view,
-                        itemsPadding = itemsPadding,
-                        onAction = onAction,
-                        modifier = Modifier.animateItem(),
-                    )
                 }
             }
         }

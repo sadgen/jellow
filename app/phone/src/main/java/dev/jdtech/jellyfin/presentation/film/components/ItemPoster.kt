@@ -74,36 +74,5 @@ fun ItemPoster(item: FindroidItem, direction: Direction, modifier: Modifier = Mo
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
-
-        // 播放次数显示 - 左下角
-        if (item.playCount >= 0) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(8.dp)
-                    .size(24.dp)
-                    .clip(MaterialTheme.shapes.extraSmall)
-                    .background(Color.White.copy(alpha = 0.9f))
-                    .padding(1.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(MaterialTheme.shapes.extraSmall)
-                        .background(
-                            if (item.playCount == 0) Color(0xFFFFA500).copy(alpha = 0.7f) 
-                            else Color(0xFF333333).copy(alpha = 0.7f)
-                        )
-                ) {
-                    Text(
-                        text = if (item.playCount == 0) "—" else item.playCount.toString(),
-                        color = Color.White,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-            }
-        }
     }
 }
