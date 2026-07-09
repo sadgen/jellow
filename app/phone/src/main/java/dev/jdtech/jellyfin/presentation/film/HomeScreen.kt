@@ -65,6 +65,7 @@ fun HomeScreen(
         onAction = { action ->
             when (action) {
                 is HomeAction.OnItemClick -> onItemClick(action.item)
+                is HomeAction.OnPlayClick -> onItemClick(action.item)
                 is HomeAction.OnLibraryClick -> onLibraryClick(action.library)
                 is HomeAction.OnSearchClick -> onSearchClick()
                 is HomeAction.OnSettingsClick -> onSettingsClick()
@@ -110,7 +111,7 @@ private fun HomeScreenLayout(state: HomeState, onAction: (HomeAction) -> Unit) {
                         modifier = Modifier.animateItem(),
                     )
                 }
-                state.resumeSection?.let { section ->
+                state.latestSection?.let { section ->
                     item(key = section.id) {
                         HomeSection(
                             section = section.homeSection,
@@ -120,7 +121,7 @@ private fun HomeScreenLayout(state: HomeState, onAction: (HomeAction) -> Unit) {
                         )
                     }
                 }
-                state.nextUpSection?.let { section ->
+                state.resumeSection?.let { section ->
                     item(key = section.id) {
                         HomeSection(
                             section = section.homeSection,

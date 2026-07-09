@@ -38,9 +38,12 @@ constructor(
         UUID(4937169328197226115, -4704919157662094443) // 44845958-8326-4e83-beb4-c4f42e9eeb95
     private val uuidNextUp =
         UUID(1783371395749072194, -6164625418200444295) // 18bfced5-f237-4d42-aa72-d9d7fed19279
+    private val uuidLatest =
+        UUID(7893371395749072195, -5164625418200444296) // latest items section
 
     private val uiTextContinueWatching = UiText.StringResource(FilmR.string.continue_watching)
     private val uiTextNextUp = UiText.StringResource(FilmR.string.next_up)
+    private val uiTextLatest = UiText.DynamicString("最新添加")
 
     fun loadData() {
         Timber.i("Loading data")
@@ -54,9 +57,9 @@ constructor(
                 // 并行加载首页各模块，加速加载
                 val deferredSuggestions = async { loadSuggestions() }
                 val deferredResume = async { loadResumeItems() }
-                val deferredNextUp = async { loadNextUpItems() }
+                val deferredLatest = async { loadLatestItems() }
                 val deferredViews = async { loadViews() }
-                awaitAll(deferredSuggestions, deferredResume, deferredNextUp, deferredViews)
+                awaitAll(deferredSuggestions, deferredResume, deferredLatest, deferredViews)
             } catch (e: Exception) {
                 _state.emit(_state.value.copy(error = e))
             }
@@ -111,23 +114,32 @@ constructor(
         _state.emit(_state.value.copy(resumeSection = section))
     }
 
-    private suspend fun loadNextUpItems() {
-        Timber.i("Loading next up items")
-        if (!appPreferences.getValue(appPreferences.homeNextUp)) {
-            _state.emit(_state.value.copy(nextUpSection = null))
+    private suspend fun loadLatestItems() {
+        Timber.i("Loading latest items")
+        if (!appPreferences.getValue(appPreferences.homeLatest)) {
+            _state.emit(_state.value.copy(latestSection = null))
             return
         }
 
-        val nextUpItems = repository.getNextUp()
+        val items =
+            repository
+                .getUserViews()
+                .filter { view ->
+                    CollectionType.fromString(view.collectionType?.serialName) in
+                        CollectionType.supported
+                }
+                .flatMap { view -> repository.getLatestMedia(view.id) }
+                .distinctBy { it.id }
+                .take(20)
 
         val section =
-            if (nextUpItems.isEmpty()) {
+            if (items.isEmpty()) {
                 null
             } else {
-                HomeItem.Section(HomeSection(uuidNextUp, uiTextNextUp, nextUpItems))
+                HomeItem.Section(HomeSection(uuidLatest, uiTextLatest, items))
             }
 
-        _state.emit(_state.value.copy(nextUpSection = section))
+        _state.emit(_state.value.copy(latestSection = section))
     }
 
     private suspend fun loadViews() {

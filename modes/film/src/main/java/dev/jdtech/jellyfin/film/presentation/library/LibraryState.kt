@@ -14,6 +14,7 @@ data class LibraryState(
     val isLoading: Boolean = false,
     val isDuplicateFinderEnabled: Boolean = false,
     val isVrFilterEnabled: Boolean = false,
+    val isListView: Boolean = false,
     val error: Exception? = null,
     val selectionMode: Boolean = false,
     val selectedItems: Set<FindroidItem> = emptySet(),

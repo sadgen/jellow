@@ -29,6 +29,9 @@ sealed interface LibraryAction {
     
     // Refresh action
     data object OnRefresh : LibraryAction
+
+    // View mode toggle
+    data object ToggleViewMode : LibraryAction
     
     // Duplicate filter action
     data object ToggleDuplicateFinder : LibraryAction

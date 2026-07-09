@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -164,6 +165,14 @@ private fun LibraryScreenLayout(
                                 contentDescription = null,
                             )
                         }
+                        IconButton(onClick = { onAction(LibraryAction.ToggleViewMode) }) {
+                            Icon(
+                                painter = painterResource(
+                                    if (state.isListView) R.drawable.ic_view_grid else R.drawable.ic_view_list
+                                ),
+                                contentDescription = null,
+                            )
+                        }
                     }
                     IconButton(onClick = { onAction(LibraryAction.ToggleDuplicateFinder) }) {
                         Icon(
@@ -261,8 +270,55 @@ private fun LibraryScreenLayout(
                         .fillMaxWidth()
                         .padding(innerPadding),
                 )
-                LazyVerticalGrid(
-                    columns = GridCellsAdaptiveWithMinColumns(minSize = 120.dp, minColumns = 3),
+                if (state.isListView) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .then(
+                                if (state.selectionMode) {
+                                    Modifier.graphicsLayer(alpha = 0.7f)
+                                } else {
+                                    Modifier
+                                }
+                            ),
+                        contentPadding = innerPadding,
+                        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+                    ) {
+                        items(
+                            count = items.itemCount,
+                            key = items.itemKey { it.id },
+                        ) {
+                            val item = items[it]
+                            item?.let { item ->
+                                ItemCard(
+                                    item = item,
+                                    direction = Direction.HORIZONTAL,
+                                    onClick = {
+                                        if (state.selectionMode) {
+                                            onAction(LibraryAction.OnItemSelectionToggle(item))
+                                        } else {
+                                            onAction(LibraryAction.OnItemClick(item))
+                                        }
+                                    },
+                                    onPlayClick = {
+                                        onAction(LibraryAction.OnPlayClick(item))
+                                    },
+                                    onLongClick = {
+                                        if (!state.selectionMode) {
+                                            onAction(LibraryAction.OnEnterSelectionMode)
+                                        }
+                                        onAction(LibraryAction.OnItemLongClick(item))
+                                    },
+                                    selected = state.selectionMode && item in state.selectedItems,
+                                    isDuplicate = item in state.duplicateItems,
+                                    modifier = Modifier.animateItem(),
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCellsAdaptiveWithMinColumns(minSize = 120.dp, minColumns = 3),
                     modifier = Modifier
                         .fillMaxSize()
                         .then(
@@ -307,7 +363,8 @@ private fun LibraryScreenLayout(
                             )
                         }
                     }
-                }
+                } // end grid content
+                } // end else (view mode)
             }
             
             // 在选择模式下添加半透明覆盖层以增强视觉效果，但排除已选中的项目

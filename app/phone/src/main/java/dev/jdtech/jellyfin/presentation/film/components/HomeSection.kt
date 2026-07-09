@@ -45,6 +45,7 @@ fun HomeSection(
                     item = item,
                     direction = Direction.HORIZONTAL,
                     onClick = { onAction(HomeAction.OnItemClick(item)) },
+                    onPlayClick = { onAction(HomeAction.OnPlayClick(it)) },
                 )
             }
         }

@@ -344,6 +344,11 @@ constructor(
                     loadItems()
                 }
             }
+            is LibraryAction.ToggleViewMode -> {
+                viewModelScope.launch {
+                    _state.emit(_state.value.copy(isListView = !_state.value.isListView))
+                }
+            }
             else -> Unit
         }
     }

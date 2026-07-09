@@ -73,6 +73,7 @@ fun HomeView(
                     item = item,
                     direction = Direction.VERTICAL,
                     onClick = { onAction(HomeAction.OnItemClick(item)) },
+                    onPlayClick = { onAction(HomeAction.OnPlayClick(it)) },
                 )
             }
         }
