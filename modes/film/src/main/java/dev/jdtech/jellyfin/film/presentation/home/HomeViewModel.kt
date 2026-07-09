@@ -15,6 +15,8 @@ import dev.jdtech.jellyfin.utils.toView
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -49,10 +51,12 @@ constructor(
                     loadServerName(serverId)
                 }
 
-                loadSuggestions()
-                loadResumeItems()
-                loadNextUpItems()
-                loadViews()
+                // 并行加载首页各模块，加速加载
+                val deferredSuggestions = async { loadSuggestions() }
+                val deferredResume = async { loadResumeItems() }
+                val deferredNextUp = async { loadNextUpItems() }
+                val deferredViews = async { loadViews() }
+                awaitAll(deferredSuggestions, deferredResume, deferredNextUp, deferredViews)
             } catch (e: Exception) {
                 _state.emit(_state.value.copy(error = e))
             }
