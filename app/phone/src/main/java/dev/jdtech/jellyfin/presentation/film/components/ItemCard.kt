@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -33,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -40,6 +40,12 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -56,6 +62,7 @@ import dev.jdtech.jellyfin.models.isDownloaded
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.repository.JellyfinRepository
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -86,6 +93,8 @@ fun ItemCard(
     var previewFrames by remember { mutableStateOf<List<Bitmap>>(emptyList()) }
     var previewFrameIndex by remember { mutableIntStateOf(0) }
     var previewDragAccum by remember { mutableFloatStateOf(0f) }
+    var cardPosition by remember { mutableStateOf(Offset.Zero) }
+    val density = LocalDensity.current
 
     // 加载 trickplay 帧
     if (isPreviewShowing && previewFrames.isEmpty() && repository != null) {
@@ -96,7 +105,11 @@ fun ItemCard(
         }
     }
 
-    Box {
+    Box(
+        modifier = Modifier.onGloballyPositioned { coordinates ->
+            cardPosition = coordinates.positionInRoot()
+        }
+    ) {
         Column(
             modifier = modifier
                 .fillMaxWidth()
@@ -240,33 +253,45 @@ fun ItemCard(
         }
 
         if (isPreviewShowing && previewFrames.isNotEmpty()) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .offset(y = (-170).dp)
-                    .width(280.dp)
-                    .height(160.dp)
-                    .clip(MaterialTheme.shapes.medium)
-                    .shadow(8.dp, MaterialTheme.shapes.medium)
-                    .background(Color.Black),
+            val popupOffsetY = with(density) {
+                (cardPosition.y - 170.dp.toPx()).roundToInt()
+            }
+            Popup(
+                alignment = Alignment.TopStart,
+                offset = IntOffset(cardPosition.x.roundToInt(), popupOffsetY),
+                onDismissRequest = { },
+                properties = PopupProperties(
+                    focusable = false,
+                    dismissOnBackPress = false,
+                    dismissOnClickOutside = false,
+                ),
             ) {
-                val frame = previewFrames[previewFrameIndex]
-                Image(
-                    painter = BitmapPainter(frame.asImageBitmap()),
-                    contentDescription = null,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize(),
-                )
-                Text(
-                    text = "${previewFrameIndex + 1}/${previewFrames.size}",
-                    color = Color.White.copy(alpha = 0.7f),
-                    style = MaterialTheme.typography.labelSmall,
+                Box(
                     modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(4.dp)
-                        .background(Color.Black.copy(alpha = 0.5f))
-                        .padding(horizontal = 4.dp),
-                )
+                        .width(280.dp)
+                        .height(160.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .shadow(8.dp, MaterialTheme.shapes.medium)
+                        .background(Color.Black),
+                ) {
+                    val frame = previewFrames[previewFrameIndex]
+                    Image(
+                        painter = BitmapPainter(frame.asImageBitmap()),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    Text(
+                        text = "${previewFrameIndex + 1}/${previewFrames.size}",
+                        color = Color.White.copy(alpha = 0.7f),
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(4.dp)
+                            .background(Color.Black.copy(alpha = 0.5f))
+                            .padding(horizontal = 4.dp),
+                    )
+                }
             }
         }
     }
