@@ -57,6 +57,7 @@ class PlayerGestureHelper(
     private var swipeGestureValueTrackerVolume = -1f
     private var swipeGestureValueTrackerBrightness = -1f
     private var swipeGestureValueTrackerProgress = -1L
+    private var swipeGestureValueTrackerZoom = -1f
 
     private var swipeGestureVolumeOpen = false
     private var swipeGestureBrightnessOpen = false
@@ -318,7 +319,7 @@ class PlayerGestureHelper(
 
                     if (abs(distanceY / distanceX) < 2) return false
 
-                    if (swipeGestureValueTrackerProgress > -1 || swipeGestureProgressOpen) {
+                    if (swipeGestureValueTrackerProgress > -1 || swipeGestureProgressOpen || swipeGestureValueTrackerZoom > -1) {
                         return false
                     }
 
@@ -330,37 +331,25 @@ class PlayerGestureHelper(
                     val ratioChange = distanceY / distanceFull
 
                     if (firstEvent.x.toInt() > viewCenterX) {
-                        // Swiping on the right, change volume
-
-                        val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-                        if (swipeGestureValueTrackerVolume == -1f)
-                            swipeGestureValueTrackerVolume = currentVolume.toFloat()
-
-                        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-                        val change = ratioChange * maxVolume
-                        swipeGestureValueTrackerVolume =
-                            (swipeGestureValueTrackerVolume + change).coerceIn(
-                                0f,
-                                maxVolume.toFloat(),
-                            )
-
-                        audioManager.setStreamVolume(
-                            AudioManager.STREAM_MUSIC,
-                            swipeGestureValueTrackerVolume.toInt(),
-                            0,
-                        )
-
+                        if (swipeGestureValueTrackerZoom == -1f) {
+                            swipeGestureValueTrackerZoom = if (playerView.player is MPVPlayer) {
+                                (playerView.player as MPVPlayer).getZoomLevel()
+                            } else {
+                                if (isZoomEnabled) 1f else 0f
+                            }
+                        }
+                        swipeGestureValueTrackerZoom = (swipeGestureValueTrackerZoom + ratioChange).coerceIn(0f, 1f)
+                        val process = (swipeGestureValueTrackerZoom * 100).toInt()
+                        if (playerView.player is MPVPlayer) {
+                            (playerView.player as MPVPlayer).setZoomLevel(swipeGestureValueTrackerZoom)
+                        } else {
+                            updateZoomMode(swipeGestureValueTrackerZoom > 0.5f)
+                        }
                         activity.binding.gestureVolumeLayout.visibility = View.VISIBLE
-                        activity.binding.gestureVolumeProgressBar.max = maxVolume.times(100)
-                        activity.binding.gestureVolumeProgressBar.progress =
-                            swipeGestureValueTrackerVolume.times(100).toInt()
-                        val process =
-                            (swipeGestureValueTrackerVolume / maxVolume.toFloat())
-                                .times(100)
-                                .toInt()
+                        activity.binding.gestureVolumeProgressBar.max = 100
+                        activity.binding.gestureVolumeProgressBar.progress = process
                         activity.binding.gestureVolumeText.text = "$process%"
-                        activity.binding.gestureVolumeImage.setImageLevel(process)
-
+                        activity.binding.gestureVolumeImage.setImageResource(android.R.drawable.ic_menu_search)
                         swipeGestureVolumeOpen = true
                     } else {
                         // Swiping on the left, change brightness
@@ -472,6 +461,7 @@ class PlayerGestureHelper(
                     removeCallbacks(hideGestureVolumeIndicatorOverlayAction)
                     postDelayed(hideGestureVolumeIndicatorOverlayAction, 1000)
                     swipeGestureVolumeOpen = false
+                    swipeGestureValueTrackerZoom = -1f
                 }
             }
             activity.binding.gestureBrightnessLayout.apply {

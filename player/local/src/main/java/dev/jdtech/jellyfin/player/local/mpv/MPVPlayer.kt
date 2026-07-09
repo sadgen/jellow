@@ -1511,6 +1511,15 @@ class MPVPlayer(
         }
     }
 
+    fun setZoomLevel(level: Float) {
+        val panscan = level.coerceIn(0f, 1f)
+        mpvLib.setPropertyString("panscan", panscan.toString())
+    }
+
+    fun getZoomLevel(): Float {
+        return mpvLib.getPropertyDouble("panscan")?.toFloat() ?: 0f
+    }
+
     private val surfaceHolder: SurfaceHolder.Callback =
         object : SurfaceHolder.Callback {
             /**
