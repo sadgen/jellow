@@ -206,7 +206,7 @@ class PlayerGestureHelper(
     }
 
     private fun togglePlayback() {
-        playerView.player?.playWhenReady = !playerView.player?.playWhenReady!!
+        playerView.player?.playWhenReady = !(playerView.player?.playWhenReady ?: true)
         animateRipple(activity.binding.imagePlaybackAnimationRipple)
     }
 

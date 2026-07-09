@@ -54,6 +54,7 @@ fun HomeScreen(
     onSettingsClick: () -> Unit,
     onManageServers: () -> Unit,
     onItemClick: (item: FindroidItem) -> Unit,
+    onPlayClick: (item: FindroidItem) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -65,7 +66,7 @@ fun HomeScreen(
         onAction = { action ->
             when (action) {
                 is HomeAction.OnItemClick -> onItemClick(action.item)
-                is HomeAction.OnPlayClick -> onItemClick(action.item)
+                is HomeAction.OnPlayClick -> onPlayClick(action.item)
                 is HomeAction.OnLibraryClick -> onLibraryClick(action.library)
                 is HomeAction.OnSearchClick -> onSearchClick()
                 is HomeAction.OnSettingsClick -> onSettingsClick()

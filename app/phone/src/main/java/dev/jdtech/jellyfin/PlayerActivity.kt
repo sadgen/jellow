@@ -168,9 +168,10 @@ class PlayerActivity : BasePlayerActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val itemId = UUID.fromString(intent.extras!!.getString("itemId"))
-        val itemKind = intent.extras!!.getString("itemKind")
-        val startFromBeginning = intent.extras!!.getBoolean("startFromBeginning")
+        val extras = intent.extras ?: Bundle()
+        val itemId = UUID.fromString(extras.getString("itemId"))
+        val itemKind = extras.getString("itemKind")
+        val startFromBeginning = extras.getBoolean("startFromBeginning")
         val mediaSourceIndex =
             if (intent.hasExtra("mediaSourceIndex")) {
                 intent.getIntExtra("mediaSourceIndex", 0)
@@ -189,8 +190,8 @@ class PlayerActivity : BasePlayerActivity() {
             } else {
                 false
             }
-        forcePortrait = intent.extras!!.getBoolean("forcePortrait", false)
-        val startInVr = intent.extras!!.getBoolean("startInVr", false)
+        forcePortrait = extras.getBoolean("forcePortrait", false)
+        val startInVr = extras.getBoolean("startInVr", false)
 
         if (startInVr) {
             viewModel.setVrMode(true, false)
@@ -832,10 +833,11 @@ class PlayerActivity : BasePlayerActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
 
-        val itemId = UUID.fromString(intent.extras!!.getString("itemId"))
-        val itemKind = intent.extras!!.getString("itemKind")
-        val startFromBeginning = intent.extras!!.getBoolean("startFromBeginning")
-        val startInVr = intent.extras!!.getBoolean("startInVr", false)
+        val extras = intent.extras ?: Bundle()
+        val itemId = UUID.fromString(extras.getString("itemId"))
+        val itemKind = extras.getString("itemKind")
+        val startFromBeginning = extras.getBoolean("startFromBeginning")
+        val startInVr = extras.getBoolean("startInVr", false)
 
         if (startInVr) {
             viewModel.setVrMode(true, false)

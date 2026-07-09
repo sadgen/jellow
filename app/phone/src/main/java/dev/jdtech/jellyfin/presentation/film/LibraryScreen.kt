@@ -271,7 +271,8 @@ private fun LibraryScreenLayout(
                         .padding(innerPadding),
                 )
                 if (state.isListView) {
-                    LazyColumn(
+                    LazyVerticalGrid(
+                        columns = GridCellsAdaptiveWithMinColumns(minSize = 180.dp, minColumns = 2),
                         modifier = Modifier
                             .fillMaxSize()
                             .then(
@@ -282,6 +283,7 @@ private fun LibraryScreenLayout(
                                 }
                             ),
                         contentPadding = innerPadding,
+                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
                         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
                     ) {
                         items(
