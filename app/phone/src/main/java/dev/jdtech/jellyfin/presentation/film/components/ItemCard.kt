@@ -3,6 +3,7 @@ package dev.jdtech.jellyfin.presentation.film.components
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -18,6 +19,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -26,7 +31,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,7 +48,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.Image
+import androidx.compose.ui.window.Dialog
 import dev.jdtech.jellyfin.core.R
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyEpisode
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyMovie
@@ -80,18 +84,17 @@ fun ItemCard(
             Direction.VERTICAL -> 150
         }
 
-    // Trickplay press-to-preview state
-    var isPreviewShowing by remember { mutableStateOf(false) }
-    var previewFrames by remember { mutableStateOf<List<Bitmap>>(emptyList()) }
-    var previewFrameIndex by remember { mutableIntStateOf(0) }
-    var previewDragAccum by remember { mutableFloatStateOf(0f) }
+    // Trickplay state
+    var trickplayFrames by remember { mutableStateOf<List<Bitmap>>(emptyList()) }
+    var isTrickplayLoaded by remember { mutableStateOf(false) }
+    var showTrickplayPopup by remember { mutableStateOf(false) }
+    var popupFrameIndex by remember { mutableIntStateOf(0) }
 
-    // 加载 trickplay 帧
-    if (isPreviewShowing && previewFrames.isEmpty() && repository != null) {
+    // Preload trickplay frames when card enters composition
+    if (item.canUseTrickplay() && repository != null && !isTrickplayLoaded) {
         TrickplayLoader(item = item, repository = repository) { frames ->
-            previewFrames = frames
-            previewFrameIndex = 0
-            previewDragAccum = 0f
+            trickplayFrames = frames
+            isTrickplayLoaded = true
         }
     }
 
@@ -108,32 +111,15 @@ fun ItemCard(
                     detectDragGesturesAfterLongPress(
                         onDragStart = {
                             if (item.canUseTrickplay() && repository != null) {
-                                isPreviewShowing = true
+                                showTrickplayPopup = true
+                                popupFrameIndex = 0
                             } else {
                                 onLongClick?.invoke()
                             }
                         },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            if (isPreviewShowing && previewFrames.isNotEmpty()) {
-                                previewDragAccum += dragAmount.x
-                                val total = previewFrames.size
-                                if (total > 0) {
-                                    val delta = (previewDragAccum / 40f).toInt()
-                                    previewFrameIndex =
-                                        ((previewFrameIndex + delta) % total + total) % total
-                                    previewDragAccum -= delta * 40f
-                                }
-                            }
-                        },
-                        onDragEnd = {
-                            isPreviewShowing = false
-                            previewFrames = emptyList()
-                        },
-                        onDragCancel = {
-                            isPreviewShowing = false
-                            previewFrames = emptyList()
-                        },
+                        onDrag = { change, _ -> change.consume() },
+                        onDragEnd = { },
+                        onDragCancel = { },
                     )
                 }
                 .then(if (selected) Modifier.clip(MaterialTheme.shapes.small) else Modifier),
@@ -144,29 +130,7 @@ fun ItemCard(
                 border = if (isDuplicate) BorderStroke(2.dp, Color.Red) else null,
             ) {
                 Box {
-                    if (isPreviewShowing && previewFrames.isNotEmpty()) {
-                        val frame = previewFrames[previewFrameIndex]
-                        Image(
-                            painter = BitmapPainter(frame.asImageBitmap()),
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .aspectRatio(if (direction == Direction.HORIZONTAL) 1.77f else 0.66f),
-                        )
-                        Text(
-                            text = "${previewFrameIndex + 1}/${previewFrames.size}",
-                            color = Color.White.copy(alpha = 0.8f),
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(4.dp)
-                                .background(Color.Black.copy(alpha = 0.5f))
-                                .padding(horizontal = 4.dp),
-                        )
-                    } else {
-                        ItemPoster(item = item, direction = direction)
-                    }
+                    ItemPoster(item = item, direction = direction)
 
                     Row(
                         modifier = Modifier
@@ -229,37 +193,107 @@ fun ItemCard(
                     }
                 }
             }
-            if (!isPreviewShowing) {
-                Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))
+            Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))
+            Text(
+                text = if (item is FindroidEpisode) item.seriesName else item.name,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = if (item is FindroidEpisode) 1 else 2,
+                overflow = TextOverflow.Ellipsis,
+                color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                else if (isDuplicate) Color.Red
+                else MaterialTheme.colorScheme.onSurface,
+            )
+            if (item is FindroidEpisode) {
                 Text(
-                    text = if (item is FindroidEpisode) item.seriesName else item.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = if (item is FindroidEpisode) 1 else 2,
+                    text = stringResource(
+                        id = R.string.episode_name_extended,
+                        item.parentIndexNumber,
+                        item.indexNumber,
+                        item.name,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                    else if (isDuplicate) Color.Red.copy(alpha = 0.8f)
+                    else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
-                    else if (isDuplicate) Color.Red
-                    else MaterialTheme.colorScheme.onSurface,
                 )
-                if (item is FindroidEpisode) {
-                    Text(
-                        text = stringResource(
-                            id = R.string.episode_name_extended,
-                            item.parentIndexNumber,
-                            item.indexNumber,
-                            item.name,
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                        else if (isDuplicate) Color.Red.copy(alpha = 0.8f)
-                        else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                Spacer(Modifier.height(2.dp))
             }
+            Spacer(Modifier.height(2.dp))
         }
 
+    }
+
+    // Trickplay popup overlay
+    if (showTrickplayPopup && repository != null) {
+        Dialog(onDismissRequest = { showTrickplayPopup = false }) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.6f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (trickplayFrames.isNotEmpty()) {
+                    val pagerState = rememberPagerState(
+                        initialPage = popupFrameIndex,
+                        pageCount = { trickplayFrames.size },
+                    )
+
+                    LaunchedEffect(pagerState.currentPage) {
+                        popupFrameIndex = pagerState.currentPage
+                    }
+
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth(0.85f),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        ),
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            HorizontalPager(
+                                state = pagerState,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = MaterialTheme.spacings.small),
+                            ) { page ->
+                                val frame = trickplayFrames[page]
+                                Image(
+                                    painter = BitmapPainter(frame.asImageBitmap()),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .aspectRatio(frame.width.toFloat() / frame.height.toFloat()),
+                                )
+                            }
+                            Text(
+                                text = "帧 ${pagerState.currentPage + 1} / ${trickplayFrames.size}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(
+                                    start = MaterialTheme.spacings.small,
+                                    end = MaterialTheme.spacings.small,
+                                    bottom = MaterialTheme.spacings.small,
+                                ),
+                            )
+                            Text(
+                                text = "点击背景关闭",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = MaterialTheme.spacings.small),
+                            )
+                        }
+                    }
+                } else {
+                    Text(
+                        text = "加载中…",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White,
+                    )
+                }
+            }
+        }
     }
 }
 
