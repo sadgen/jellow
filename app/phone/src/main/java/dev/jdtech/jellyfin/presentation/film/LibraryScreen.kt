@@ -3,7 +3,6 @@ package dev.jdtech.jellyfin.presentation.film
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,7 +35,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -66,7 +64,6 @@ import dev.jdtech.jellyfin.presentation.film.components.Direction
 import dev.jdtech.jellyfin.presentation.film.components.ErrorCard
 import dev.jdtech.jellyfin.presentation.film.components.ItemCard
 import dev.jdtech.jellyfin.presentation.film.components.SortByDialog
-import dev.jdtech.jellyfin.presentation.film.components.TrickplayPreviewDialog
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.presentation.utils.GridCellsAdaptiveWithMinColumns
@@ -91,7 +88,6 @@ fun LibraryScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     var initialLoad by rememberSaveable { mutableStateOf(true) }
-    var trickplayItem by remember { mutableStateOf<FindroidItem?>(null) }
 
     LaunchedEffect(true) {
         viewModel.setup(parentId = libraryId, libraryType = libraryType)
@@ -129,24 +125,7 @@ fun LibraryScreen(
             viewModel.onAction(action)
         },
         snackbarHostState = snackbarHostState,
-        onTrickplayItem = { trickplayItem = it },
     )
-    
-    trickplayItem?.let { item ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.5f))
-                .clickable { trickplayItem = null },
-            contentAlignment = Alignment.Center,
-        ) {
-            TrickplayPreviewDialog(
-                item = item,
-                repository = viewModel.repository,
-                onDismiss = { trickplayItem = null },
-            )
-        }
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -157,7 +136,6 @@ private fun LibraryScreenLayout(
     repository: JellyfinRepository? = null,
     onAction: (LibraryAction) -> Unit,
     snackbarHostState: SnackbarHostState,
-    onTrickplayItem: (FindroidItem) -> Unit = {},
 ) {
     val items = state.items.collectAsLazyPagingItems()
     var showSortByDialog by rememberSaveable { mutableStateOf(false) }
@@ -333,7 +311,7 @@ private fun LibraryScreenLayout(
                                     onPlayClick = {
                                         onAction(LibraryAction.OnPlayClick(item))
                                     },
-                                    onLongClick = { onTrickplayItem(item) },
+                                    repository = repository,
                                     selected = state.selectionMode && item in state.selectedItems,
                                     isDuplicate = item in state.duplicateItems,
                                     modifier = Modifier.animateItem(),
@@ -363,24 +341,24 @@ private fun LibraryScreenLayout(
                     ) {
                         val item = items[it]
                         item?.let { item ->
-                            ItemCard(
-                                item = item,
-                                direction = Direction.VERTICAL,
-                                onClick = {
-                                    if (state.selectionMode) {
-                                        onAction(LibraryAction.OnItemSelectionToggle(item))
-                                    } else {
-                                        onAction(LibraryAction.OnItemClick(item))
-                                    }
-                                },
-                                onPlayClick = {
-                                    onAction(LibraryAction.OnPlayClick(item))
-                                },
-                                onLongClick = { onTrickplayItem(item) },
-                                selected = state.selectionMode && item in state.selectedItems,
-                                isDuplicate = item in state.duplicateItems,
-                                modifier = Modifier.animateItem(),
-                            )
+                                ItemCard(
+                                    item = item,
+                                    direction = Direction.VERTICAL,
+                                    onClick = {
+                                        if (state.selectionMode) {
+                                            onAction(LibraryAction.OnItemSelectionToggle(item))
+                                        } else {
+                                            onAction(LibraryAction.OnItemClick(item))
+                                        }
+                                    },
+                                    onPlayClick = {
+                                        onAction(LibraryAction.OnPlayClick(item))
+                                    },
+                                    repository = repository,
+                                    selected = state.selectionMode && item in state.selectedItems,
+                                    isDuplicate = item in state.duplicateItems,
+                                    modifier = Modifier.animateItem(),
+                                )
                         }
                     }
                 } // end grid content

@@ -58,6 +58,7 @@ import dev.jdtech.jellyfin.models.FindroidCollection
 import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidPerson
 import dev.jdtech.jellyfin.presentation.components.ErrorDialog
+import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.presentation.film.components.Direction
 import dev.jdtech.jellyfin.presentation.film.components.HomeHeader
 import dev.jdtech.jellyfin.presentation.film.components.HomeLibraryFolders
@@ -101,12 +102,17 @@ fun HomeScreen(
             }
             viewModel.onAction(action)
         },
+        repository = viewModel.repository,
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HomeScreenLayout(state: HomeState, onAction: (HomeAction) -> Unit) {
+private fun HomeScreenLayout(
+    state: HomeState,
+    onAction: (HomeAction) -> Unit,
+    repository: JellyfinRepository? = null,
+) {
     val scope = rememberCoroutineScope()
     val safePadding = rememberSafePadding(handleStartInsets = false)
 
@@ -146,6 +152,7 @@ private fun HomeScreenLayout(state: HomeState, onAction: (HomeAction) -> Unit) {
                         itemsPadding = itemsPadding,
                         onAction = onAction,
                         modifier = Modifier.animateItem(),
+                        repository = repository,
                     )
                 }
                 state.resumeSection?.let { section ->
@@ -155,6 +162,7 @@ private fun HomeScreenLayout(state: HomeState, onAction: (HomeAction) -> Unit) {
                             itemsPadding = itemsPadding,
                             onAction = onAction,
                             modifier = Modifier.animateItem(),
+                            repository = repository,
                         )
                     }
                 }

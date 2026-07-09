@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.film.presentation.home.HomeAction
 import dev.jdtech.jellyfin.models.HomeSection
 import dev.jdtech.jellyfin.presentation.theme.spacings
+import dev.jdtech.jellyfin.repository.JellyfinRepository
 
 @Composable
 fun HomeSection(
@@ -26,6 +27,7 @@ fun HomeSection(
     itemsPadding: PaddingValues,
     onAction: (HomeAction) -> Unit,
     modifier: Modifier = Modifier,
+    repository: JellyfinRepository? = null,
 ) {
     Column(modifier = modifier) {
         Box(modifier = Modifier.fillMaxWidth().height(42.dp).padding(itemsPadding)) {
@@ -46,6 +48,7 @@ fun HomeSection(
                     direction = Direction.HORIZONTAL,
                     onClick = { onAction(HomeAction.OnItemClick(item)) },
                     onPlayClick = { onAction(HomeAction.OnPlayClick(it)) },
+                    repository = repository,
                 )
             }
         }

@@ -27,6 +27,7 @@ import dev.jdtech.jellyfin.models.FindroidCollection
 import dev.jdtech.jellyfin.models.FindroidImages
 import dev.jdtech.jellyfin.models.HomeItem
 import dev.jdtech.jellyfin.presentation.theme.spacings
+import dev.jdtech.jellyfin.repository.JellyfinRepository
 
 @Composable
 fun HomeView(
@@ -34,6 +35,7 @@ fun HomeView(
     itemsPadding: PaddingValues,
     onAction: (HomeAction) -> Unit,
     modifier: Modifier = Modifier,
+    repository: JellyfinRepository? = null,
 ) {
     Column(modifier = modifier) {
         Box(modifier = Modifier.fillMaxWidth().height(42.dp).padding(itemsPadding)) {
@@ -74,6 +76,7 @@ fun HomeView(
                     direction = Direction.VERTICAL,
                     onClick = { onAction(HomeAction.OnItemClick(item)) },
                     onPlayClick = { onAction(HomeAction.OnPlayClick(it)) },
+                    repository = repository,
                 )
             }
         }
