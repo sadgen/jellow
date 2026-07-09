@@ -1,24 +1,33 @@
 # Jellow
 
-[**English**](README.md) | [**中文**](README.zh.md)
+[**English**](README.en.md) | [**中文**](README.md)
 
-**Jellow** is a third-party Android application for [Jellyfin](https://jellyfin.org), forked from [Findroid](https://github.com/jarnedemeulemeester/findroid). It provides a native user interface to browse and play movies and series.
+**Jellow** 是一个第三方的 [Jellyfin](https://jellyfin.org) Android 客户端，基于 [Findroid](https://github.com/jarnedemeulemeester/findroid) 修改增强。
 
-> This is a personal fork with additional features. Not affiliated with the official Findroid project.
+> 个人维护的分支，非官方项目。
 
-## Additional features vs Findroid
+## 相对 Findroid 新增功能
 
-- **mpv player backend** alongside ExoPlayer
-- **Transcoding support** with adjustable bitrate
-- **Instant bitrate change** — tap the playback info overlay to change bitrate without restarting playback
-- **Playback info overlay** — codec, resolution, transcoding bitrate, network speed, and data usage display
-- **Gesture controls** — gyroscope-based video panning
-- **VR mode** — 360° video via spherical GL surface view
-- **Picture-in-picture** with gesture controls
-- **Skip segments** — intro/credits skip (requires Jellyfin 10.10+)
-- **Trickplay** — thumbnail previews on seek (requires Jellyfin 10.9+)
-- **Lock screen**, orientation toggle, chapter markers
+- **mpv 播放器内核** — 支持 ExoPlayer 和 mpv 双后端切换
+- **转码播放** — 支持服务端转码，可调整码率
+- **码率即时生效** — 点击左下角播放信息浮层，无需重启即可切换码率
+- **播放信息叠加层** — 实时显示编码格式、分辨率、转码码率、下行网速、流量统计
+- **陀螺仪操控** — 身体转动控制视频平移/缩放
+- **VR 模式** — 360° 全景视频播放
+- **画中画** — 支持手势控制
+- **跳过片头/片尾** — 手动跳过和自动跳过（需 Jellyfin 10.10+）
+- **Trickplay 预览** — 拖动进度条时显示缩略图预览（需 Jellyfin 10.9+）
+- **锁屏、横竖屏锁定、章节标记**
 
-## License
+## 构建
+
+```bash
+export JAVA_HOME=/path/to/jdk-21.0.10+7
+./gradlew assembleJellowDebug
+```
+
+APK 输出位置：`app/phone/build/outputs/apk/jellow/debug/phone-jellow-arm64-v8a-debug.apk`
+
+## 许可证
 
 [GPLv3](LICENSE)
