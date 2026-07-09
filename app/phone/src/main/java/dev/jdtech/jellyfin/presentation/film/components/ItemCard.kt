@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -38,11 +39,15 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.compose.foundation.Image
 import dev.jdtech.jellyfin.core.R
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyEpisode
@@ -56,6 +61,7 @@ import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
 private fun FindroidItem.canUseTrickplay(): Boolean {
     return (this as? FindroidSources)?.trickplayInfo?.isNotEmpty() == true
@@ -84,6 +90,8 @@ fun ItemCard(
     var previewFrames by remember { mutableStateOf<List<Bitmap>>(emptyList()) }
     var previewFrameIndex by remember { mutableIntStateOf(0) }
     var previewDragAccum by remember { mutableFloatStateOf(0f) }
+    var previewPopupOffset by remember { mutableFloatStateOf(0f) }
+    val density = LocalDensity.current
 
     // 加载 trickplay 帧
     if (isPreviewShowing && previewFrames.isEmpty() && repository != null) {
@@ -94,76 +102,56 @@ fun ItemCard(
         }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .width(width.dp)
-            .clip(MaterialTheme.shapes.small)
-            .pointerInput(item.id) {
-                detectTapGestures(onTap = { onClick(item) })
-            }
-            .pointerInput(item.id, repository) {
-                detectDragGesturesAfterLongPress(
-                    onDragStart = {
-                        if (item.canUseTrickplay() && repository != null) {
-                            isPreviewShowing = true
-                        } else {
-                            onLongClick?.invoke()
-                        }
-                    },
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        if (isPreviewShowing && previewFrames.isNotEmpty()) {
-                            previewDragAccum += dragAmount.x
-                            val total = previewFrames.size
-                            if (total > 0) {
-                                val delta = (previewDragAccum / 40f).toInt()
-                                previewFrameIndex =
-                                    ((previewFrameIndex + delta) % total + total) % total
-                                previewDragAccum -= delta * 40f
+    Box {
+        Column(
+            modifier = modifier
+                .fillMaxWidth()
+                .width(width.dp)
+                .clip(MaterialTheme.shapes.small)
+                .pointerInput(item.id) {
+                    detectTapGestures(onTap = { onClick(item) })
+                }
+                .pointerInput(item.id, repository) {
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = { offset ->
+                            if (item.canUseTrickplay() && repository != null) {
+                                isPreviewShowing = true
+                                previewPopupOffset = offset.x
+                            } else {
+                                onLongClick?.invoke()
                             }
-                        }
-                    },
-                    onDragEnd = {
-                        isPreviewShowing = false
-                        previewFrames = emptyList()
-                    },
-                    onDragCancel = {
-                        isPreviewShowing = false
-                        previewFrames = emptyList()
-                    },
-                )
-            }
-            .then(if (selected) Modifier.clip(MaterialTheme.shapes.small) else Modifier),
-    ) {
-        Surface(
-            shape = MaterialTheme.shapes.small,
-            color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-            border = if (isDuplicate) BorderStroke(2.dp, Color.Red) else null,
+                        },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            if (isPreviewShowing && previewFrames.isNotEmpty()) {
+                                previewDragAccum += dragAmount.x
+                                val total = previewFrames.size
+                                if (total > 0) {
+                                    val delta = (previewDragAccum / 40f).toInt()
+                                    previewFrameIndex =
+                                        ((previewFrameIndex + delta) % total + total) % total
+                                    previewDragAccum -= delta * 40f
+                                }
+                            }
+                        },
+                        onDragEnd = {
+                            isPreviewShowing = false
+                            previewFrames = emptyList()
+                        },
+                        onDragCancel = {
+                            isPreviewShowing = false
+                            previewFrames = emptyList()
+                        },
+                    )
+                }
+                .then(if (selected) Modifier.clip(MaterialTheme.shapes.small) else Modifier),
         ) {
-            Box {
-                if (isPreviewShowing && previewFrames.isNotEmpty()) {
-                    // 内联 trickplay 预览
-                    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-                        val frame = previewFrames[previewFrameIndex]
-                        Image(
-                            painter = BitmapPainter(frame.asImageBitmap()),
-                            contentDescription = null,
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                        Text(
-                            text = "${previewFrameIndex + 1}/${previewFrames.size}",
-                            color = Color.White.copy(alpha = 0.7f),
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(4.dp)
-                                .background(Color.Black.copy(alpha = 0.5f))
-                                .padding(horizontal = 4.dp),
-                        )
-                    }
-                } else {
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                border = if (isDuplicate) BorderStroke(2.dp, Color.Red) else null,
+            ) {
+                Box {
                     ItemPoster(item = item, direction = direction)
 
                     Row(
@@ -227,35 +215,80 @@ fun ItemCard(
                     }
                 }
             }
-        }
-        if (!isPreviewShowing) {
-            Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))
-            Text(
-                text = if (item is FindroidEpisode) item.seriesName else item.name,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = if (item is FindroidEpisode) 1 else 2,
-                overflow = TextOverflow.Ellipsis,
-                color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
-                else if (isDuplicate) Color.Red
-                else MaterialTheme.colorScheme.onSurface,
-            )
-            if (item is FindroidEpisode) {
+            if (!isPreviewShowing) {
+                Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))
                 Text(
-                    text = stringResource(
-                        id = R.string.episode_name_extended,
-                        item.parentIndexNumber,
-                        item.indexNumber,
-                        item.name,
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                    else if (isDuplicate) Color.Red.copy(alpha = 0.8f)
-                    else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
-                    maxLines = 1,
+                    text = if (item is FindroidEpisode) item.seriesName else item.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = if (item is FindroidEpisode) 1 else 2,
                     overflow = TextOverflow.Ellipsis,
+                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                    else if (isDuplicate) Color.Red
+                    else MaterialTheme.colorScheme.onSurface,
                 )
+                if (item is FindroidEpisode) {
+                    Text(
+                        text = stringResource(
+                            id = R.string.episode_name_extended,
+                            item.parentIndexNumber,
+                            item.indexNumber,
+                            item.name,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        else if (isDuplicate) Color.Red.copy(alpha = 0.8f)
+                        else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Spacer(Modifier.height(2.dp))
             }
-            Spacer(Modifier.height(2.dp))
+        }
+
+        // 悬浮 trickplay 小窗 — 像播放器进度条预览一样
+        if (isPreviewShowing && previewFrames.isNotEmpty()) {
+            val popupTopOffset = with(density) { (-200).dp.roundToPx() }
+
+            Popup(
+                alignment = Alignment.TopCenter,
+                offset = IntOffset(0, popupTopOffset),
+                onDismissRequest = {
+                    isPreviewShowing = false
+                    previewFrames = emptyList()
+                },
+                properties = PopupProperties(
+                    focusable = false,
+                    dismissOnBackPress = false,
+                    dismissOnClickOutside = false,
+                ),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(280.dp)
+                        .height(160.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(Color.Black)
+                ) {
+                    val frame = previewFrames[previewFrameIndex]
+                    Image(
+                        painter = BitmapPainter(frame.asImageBitmap()),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    Text(
+                        text = "${previewFrameIndex + 1}/${previewFrames.size}",
+                        color = Color.White.copy(alpha = 0.7f),
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(4.dp)
+                            .background(Color.Black.copy(alpha = 0.5f))
+                            .padding(horizontal = 4.dp),
+                    )
+                }
+            }
         }
     }
 }

@@ -9,6 +9,7 @@ data class FindroidPerson(
     val name: String,
     val overview: String,
     val images: FindroidImages,
+    val itemCount: Int = 0,
 )
 
 fun BaseItemDto.toFindroidPerson(repository: JellyfinRepository): FindroidPerson {
@@ -17,5 +18,6 @@ fun BaseItemDto.toFindroidPerson(repository: JellyfinRepository): FindroidPerson
         name = name.orEmpty(),
         overview = overview.orEmpty(),
         images = toFindroidImages(repository),
+        itemCount = movieCount ?: recursiveItemCount ?: childCount ?: 0,
     )
 }

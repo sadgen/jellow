@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -227,15 +228,30 @@ private fun HomePersonsSection(
             style = MaterialTheme.typography.titleMedium,
         )
         Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))
-        LazyRow(
-            contentPadding = itemsPadding,
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
+        // 竖向 3 列排列
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(itemsPadding),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
         ) {
-            items(persons, key = { it.id }) { person ->
-                PersonCard(
-                    person = person,
-                    onClick = { onPersonClick(person.id) },
-                )
+            persons.chunked(3).forEach { rowPersons ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
+                ) {
+                    rowPersons.forEach { person ->
+                        PersonCard(
+                            person = person,
+                            onClick = { onPersonClick(person.id) },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    // 补齐空位
+                    repeat(3 - rowPersons.size) {
+                        Spacer(Modifier.weight(1f))
+                    }
+                }
             }
         }
     }
@@ -249,7 +265,6 @@ private fun PersonCard(
 ) {
     Column(
         modifier = modifier
-            .width(96.dp)
             .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -258,9 +273,9 @@ private fun PersonCard(
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
-                .width(80.dp)
+                .fillMaxWidth()
                 .aspectRatio(1f)
-                .clip(MaterialTheme.shapes.extraLarge)
+                .clip(MaterialTheme.shapes.medium)
                 .background(MaterialTheme.colorScheme.surfaceContainer),
         )
         Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))
@@ -270,6 +285,11 @@ private fun PersonCard(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = "${person.itemCount}片",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

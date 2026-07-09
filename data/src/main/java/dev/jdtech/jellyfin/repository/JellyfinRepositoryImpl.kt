@@ -312,7 +312,7 @@ class JellyfinRepositoryImpl(
         withContext(Dispatchers.IO) {
             val request = GetPersonsRequest(
                 limit = limit,
-                fields = listOf(ItemFields.PRIMARY_IMAGE_ASPECT_RATIO),
+                fields = listOf(ItemFields.ITEM_COUNTS, ItemFields.PRIMARY_IMAGE_ASPECT_RATIO),
                 userId = jellyfinApi.userId,
             )
             jellyfinApi.personsApi

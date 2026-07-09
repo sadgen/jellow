@@ -129,6 +129,7 @@ constructor(
         Timber.i("Loading persons")
         try {
             val persons = repository.getPersons(limit = 30)
+                .sortedByDescending { it.itemCount }
             _state.emit(_state.value.copy(persons = persons))
         } catch (e: Exception) {
             Timber.e(e, "Failed to load persons")

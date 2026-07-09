@@ -398,28 +398,25 @@ class PlayerGestureHelper(
             swipeGestureValueTrackerZoom = if (playerView.player is MPVPlayer) {
                 (playerView.player as MPVPlayer).getZoomLevel()
             } else {
-                // 读取当前缩放值：从 isZoomEnabled + videoSurfaceView scale 恢复
+                // ExoPlayer: 读取当前 scale 作为初始值
                 val currentScale = playerView.videoSurfaceView?.scaleX ?: 1f
-                if (currentScale > 1.05f) (currentScale - 1f) else 0f
+                (currentScale - 1f) / 0.5f // 0=1.0x → 0%, 1=1.5x → 100%
             }
         }
         swipeGestureValueTrackerZoom = (swipeGestureValueTrackerZoom + ratioChange).coerceIn(0f, 1f)
         val process = (swipeGestureValueTrackerZoom * 100).toInt()
         if (playerView.player is MPVPlayer) {
+            // MPV: panscan 0→1 天然对应 左右填满→上下填满
             (playerView.player as MPVPlayer).setZoomLevel(swipeGestureValueTrackerZoom)
         } else {
-            // ExoPlayer: 平滑比例缩放
-            // 0% → RESIZE_MODE_FIT (video fits width)
-            // ~50% → RESIZE_MODE_ZOOM begins (transition to fill height)
-            // 100% → RESIZE_MODE_ZOOM + slight scale to fill height
-            val zoomFraction = swipeGestureValueTrackerZoom
-            val scale = 1.0f + zoomFraction * 0.3f  // 最大只缩放到 1.3x
+            // ExoPlayer: 保持 FIT 模式，仅平滑缩放
+            // 0% → 1.0x (fit width), 50% → 1.25x, 100% → 1.5x
+            // 始终不超出容器，上下不过边
+            val scale = 1.0f + swipeGestureValueTrackerZoom * 0.5f
             playerView.videoSurfaceView?.apply {
                 scaleX = scale
                 scaleY = scale
             }
-            // 超过一定阈值才切 ZOOM 模式，避免瞬间跳变
-            updateZoomMode(zoomFraction > 0.4f)
         }
         activity.binding.gestureVolumeLayout.visibility = View.VISIBLE
         activity.binding.gestureVolumeProgressBar.max = 100
