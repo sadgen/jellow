@@ -6,14 +6,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Card
@@ -49,35 +47,48 @@ fun TrickplayPreviewDialog(
     onDismiss: () -> Unit,
 ) {
     var trickplayInfo by remember { mutableStateOf<dev.jdtech.jellyfin.models.FindroidTrickplayInfo?>(null) }
-    var tileBitmaps by remember { mutableStateOf<List<Bitmap>>(emptyList()) }
-    var totalTiles by remember { mutableIntStateOf(0) }
+    var frames by remember { mutableStateOf<List<Bitmap>>(emptyList()) }
     var loaded by remember { mutableStateOf(false) }
 
-    // 加载 trickplay 信息
+    // 加载 trickplay 信息并切片为独立帧
     LaunchedEffect(item.id) {
         if (repository != null) {
             try {
                 val info = repository.getTrickplayInfoForItem(item.id)
                 trickplayInfo = info
                 if (info != null && info.thumbnailCount > 0) {
-                    val framesPerTile = info.tileWidth * info.tileHeight
-                    val tileCount = (info.thumbnailCount + framesPerTile - 1) / framesPerTile
-                    totalTiles = tileCount
+                    val maxIndex = kotlin.math.ceil(
+                        info.thumbnailCount.toDouble()
+                            .div(info.tileWidth * info.tileHeight)
+                    ).toInt()
+                    val frameList = mutableListOf<Bitmap>()
 
-                    // 加载所有 tile 图片
-                    val bitmaps = mutableListOf<Bitmap>()
-                    for (i in 0 until tileCount.coerceAtMost(10)) { // 最多加载10个tile
+                    for (i in 0..maxIndex) {
                         try {
                             val data = repository.getTrickplayData(item.id, info.width, i)
                             if (data != null) {
                                 withContext(Dispatchers.IO) {
-                                    val bmp = BitmapFactory.decodeByteArray(data, 0, data.size)
-                                    if (bmp != null) bitmaps.add(bmp)
+                                    val fullBitmap = BitmapFactory.decodeByteArray(data, 0, data.size)
+                                    if (fullBitmap != null) {
+                                        for (offsetY in
+                                            0..<info.height * info.tileHeight step info.height) {
+                                            for (offsetX in
+                                                0..<info.width * info.tileWidth step info.width) {
+                                                val frame = Bitmap.createBitmap(
+                                                    fullBitmap, offsetX, offsetY,
+                                                    info.width, info.height,
+                                                )
+                                                frameList.add(frame)
+                                                if (frameList.size >= info.thumbnailCount) break
+                                            }
+                                            if (frameList.size >= info.thumbnailCount) break
+                                        }
+                                    }
                                 }
                             }
                         } catch (_: Exception) { }
                     }
-                    tileBitmaps = bitmaps
+                    frames = frameList
                 }
             } catch (_: Exception) { }
         }
@@ -94,49 +105,43 @@ fun TrickplayPreviewDialog(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
         ),
     ) {
-        if (tileBitmaps.isNotEmpty() && trickplayInfo != null) {
+        if (frames.isNotEmpty() && trickplayInfo != null) {
             val info = trickplayInfo!!
-            val framesPerTile = info.tileWidth * info.tileHeight
-            val pagerState = rememberPagerState(pageCount = { tileBitmaps.size })
+            val pagerState = rememberPagerState(pageCount = { frames.size })
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 // 说明文字
                 Text(
-                    text = "← 左右滑动预览 →",
+                    text = "← 左右滑动浏览帧 →",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = MaterialTheme.spacings.small),
                 )
 
-                // 横向分页显示每个 tile
+                // 横向分页显示单个帧（像进度条预览一样）
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = MaterialTheme.spacings.small),
                 ) { page ->
-                    if (page < tileBitmaps.size) {
-                        val bitmap = tileBitmaps[page]
-                        val aspectW = info.tileWidth.toFloat()
-                        val aspectH = info.tileHeight.toFloat()
-
+                    if (page < frames.size) {
+                        val frame = frames[page]
                         Image(
-                            painter = BitmapPainter(bitmap.asImageBitmap()),
+                            painter = BitmapPainter(frame.asImageBitmap()),
                             contentDescription = null,
                             contentScale = ContentScale.Fit,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .aspectRatio(aspectW / aspectH),
+                                .aspectRatio(info.width.toFloat() / info.height.toFloat()),
                         )
                     }
                 }
 
                 // 页码指示
                 val currentPage = pagerState.currentPage
-                val startThumb = currentPage * framesPerTile + 1
-                val endThumb = ((currentPage + 1) * framesPerTile).coerceAtMost(info.thumbnailCount)
                 Text(
-                    text = "$startThumb - $endThumb / ${info.thumbnailCount}",
+                    text = "帧 ${currentPage + 1} / ${frames.size}",
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.padding(
                         start = MaterialTheme.spacings.small,

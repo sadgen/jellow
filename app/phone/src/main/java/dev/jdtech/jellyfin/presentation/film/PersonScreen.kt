@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,6 +25,10 @@ import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,10 +49,13 @@ import dev.jdtech.jellyfin.film.presentation.person.PersonState
 import dev.jdtech.jellyfin.film.presentation.person.PersonViewModel
 import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidPerson
+import dev.jdtech.jellyfin.models.SortBy
+import dev.jdtech.jellyfin.models.SortOrder
 import dev.jdtech.jellyfin.presentation.film.components.Direction
 import dev.jdtech.jellyfin.presentation.film.components.ItemCard
 import dev.jdtech.jellyfin.presentation.film.components.ItemTopBar
 import dev.jdtech.jellyfin.presentation.film.components.OverviewText
+import dev.jdtech.jellyfin.presentation.film.components.SortByDialog
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.presentation.utils.rememberSafePadding
@@ -93,6 +99,8 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
     val paddingBottom = safePadding.bottom + MaterialTheme.spacings.small
 
     val itemsPadding = PaddingValues(start = paddingStart, end = paddingEnd)
+    
+    var showSortByDialog by rememberSaveable { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         state.person?.let { person ->
@@ -119,10 +127,10 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
                                 if (person.overview.isNotBlank()) {
                                     OverviewText(text = person.overview, maxCollapsedLines = 12)
                                 }
-                                // 排序和视图切换按钮
                                 PersonActionButtons(
                                     isListView = state.isListView,
                                     onToggleView = { onAction(PersonAction.ToggleViewMode) },
+                                    onSort = { showSortByDialog = true },
                                 )
                             }
                         }
@@ -142,10 +150,10 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
                             if (person.overview.isNotBlank()) {
                                 OverviewText(text = person.overview, maxCollapsedLines = 4)
                             }
-                            // 排序和视图切换按钮
                             PersonActionButtons(
                                 isListView = state.isListView,
                                 onToggleView = { onAction(PersonAction.ToggleViewMode) },
+                                onSort = { showSortByDialog = true },
                             )
                         }
                     }
@@ -163,20 +171,11 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
-                            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
-                        ) {
-                            state.starredInMovies.forEach { item ->
-                                ItemCard(
-                                    item = item,
-                                    direction = if (state.isListView) Direction.HORIZONTAL else Direction.VERTICAL,
-                                    onClick = { onAction(PersonAction.NavigateToItem(item)) },
-                                    modifier = Modifier
-                                        .fillMaxWidth(if (state.isListView) 0.5f else 0.33f),
-                                )
-                            }
-                        }
+                        PersonItemGrid(
+                            items = state.starredInMovies,
+                            isListView = state.isListView,
+                            onItemClick = { onAction(PersonAction.NavigateToItem(it)) },
+                        )
                     }
 
                     if (state.starredInShows.isNotEmpty()) {
@@ -185,20 +184,11 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
-                            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
-                        ) {
-                            state.starredInShows.forEach { item ->
-                                ItemCard(
-                                    item = item,
-                                    direction = if (state.isListView) Direction.HORIZONTAL else Direction.VERTICAL,
-                                    onClick = { onAction(PersonAction.NavigateToItem(item)) },
-                                    modifier = Modifier
-                                        .fillMaxWidth(if (state.isListView) 0.5f else 0.33f),
-                                )
-                            }
-                        }
+                        PersonItemGrid(
+                            items = state.starredInShows,
+                            isListView = state.isListView,
+                            onItemClick = { onAction(PersonAction.NavigateToItem(it)) },
+                        )
                     }
                 }
 
@@ -213,16 +203,68 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
             onHomeClick = { onAction(PersonAction.NavigateHome) },
         )
     }
+
+    if (showSortByDialog) {
+        SortByDialog(
+            currentSortBy = state.sortBy,
+            currentSortOrder = state.sortOrder,
+            showOnlyDuplicates = false,
+            onUpdate = { sortBy, sortOrder ->
+                onAction(PersonAction.UpdateSort(sortBy, sortOrder))
+            },
+            onToggleShowOnlyDuplicates = {},
+            onDismissRequest = { showSortByDialog = false },
+        )
+    }
+}
+
+@Composable
+private fun PersonItemGrid(
+    items: List<FindroidItem>,
+    isListView: Boolean,
+    onItemClick: (FindroidItem) -> Unit,
+) {
+    val columnCount = if (isListView) 2 else 3
+    Column(
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small)
+    ) {
+        items.chunked(columnCount).forEach { rowItems ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+            ) {
+                rowItems.forEach { item ->
+                    ItemCard(
+                        item = item,
+                        direction = if (isListView) Direction.HORIZONTAL else Direction.VERTICAL,
+                        onClick = { onItemClick(item) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                // 补齐空位
+                repeat(columnCount - rowItems.size) {
+                    Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+    }
 }
 
 @Composable
 private fun PersonActionButtons(
     isListView: Boolean,
     onToggleView: () -> Unit,
+    onSort: () -> Unit,
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
     ) {
+        IconButton(onClick = onSort) {
+            Icon(
+                painter = painterResource(CoreR.drawable.ic_arrow_down_up),
+                contentDescription = null,
+            )
+        }
         IconButton(onClick = onToggleView) {
             Icon(
                 painter = painterResource(

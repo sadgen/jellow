@@ -398,7 +398,9 @@ class PlayerGestureHelper(
             swipeGestureValueTrackerZoom = if (playerView.player is MPVPlayer) {
                 (playerView.player as MPVPlayer).getZoomLevel()
             } else {
-                if (isZoomEnabled) 1f else 0f
+                // 读取当前缩放值：从 isZoomEnabled + videoSurfaceView scale 恢复
+                val currentScale = playerView.videoSurfaceView?.scaleX ?: 1f
+                if (currentScale > 1.05f) (currentScale - 1f) else 0f
             }
         }
         swipeGestureValueTrackerZoom = (swipeGestureValueTrackerZoom + ratioChange).coerceIn(0f, 1f)
@@ -406,7 +408,14 @@ class PlayerGestureHelper(
         if (playerView.player is MPVPlayer) {
             (playerView.player as MPVPlayer).setZoomLevel(swipeGestureValueTrackerZoom)
         } else {
-            updateZoomMode(swipeGestureValueTrackerZoom > 0.5f)
+            // 连续比例缩放：0→1.0x, 0.5→1.5x, 1.0→2.0x
+            val scale = 1.0f + swipeGestureValueTrackerZoom
+            playerView.videoSurfaceView?.apply {
+                scaleX = scale
+                scaleY = scale
+            }
+            // 缩放 >1 时切到 ZOOM 模式剪裁边缘
+            updateZoomMode(swipeGestureValueTrackerZoom > 0.01f)
         }
         activity.binding.gestureVolumeLayout.visibility = View.VISIBLE
         activity.binding.gestureVolumeProgressBar.max = 100
@@ -467,7 +476,13 @@ class PlayerGestureHelper(
         } else {
             playerView.resizeMode =
                 if (enabled) AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                else AspectRatioFrameLayout.RESIZE_MODE_FIT
+                else {
+                    playerView.videoSurfaceView?.apply {
+                        scaleX = 1f
+                        scaleY = 1f
+                    }
+                    AspectRatioFrameLayout.RESIZE_MODE_FIT
+                }
         }
         isZoomEnabled = enabled
         onZoomStateChanged?.invoke(enabled)

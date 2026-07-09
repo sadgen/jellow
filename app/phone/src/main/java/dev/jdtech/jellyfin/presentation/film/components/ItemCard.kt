@@ -87,7 +87,7 @@ fun ItemCard(
 
     Column(
         modifier = modifier
-            .width(width.dp)
+            .fillMaxWidth()
             .clip(MaterialTheme.shapes.small)
             .combinedClickable(
                 onClick = {
