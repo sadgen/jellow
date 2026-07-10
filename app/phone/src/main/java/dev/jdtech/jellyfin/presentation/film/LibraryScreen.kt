@@ -148,145 +148,189 @@ private fun LibraryScreenLayout(
     var showMenu by remember { mutableStateOf(false) }
     var floatingVideoItem by remember { mutableStateOf<FindroidItem?>(null) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(text = libraryName) },
-                navigationIcon = {
-                    IconButton(onClick = { onAction(LibraryAction.OnBackClick) }) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_arrow_left),
-                            contentDescription = null,
-                        )
-                    }
-                },
-                actions = {
-                    if (items.itemCount > 0) {
-                        IconButton(onClick = { showSortByDialog = true }) {
+    Box(Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(text = libraryName) },
+                    navigationIcon = {
+                        IconButton(onClick = { onAction(LibraryAction.OnBackClick) }) {
                             Icon(
-                                painter = painterResource(R.drawable.ic_arrow_down_up),
+                                painter = painterResource(R.drawable.ic_arrow_left),
                                 contentDescription = null,
                             )
                         }
-                        IconButton(onClick = { onAction(LibraryAction.ToggleViewMode) }) {
-                            Icon(
-                                painter = painterResource(
-                                    if (state.isListView) R.drawable.ic_view_grid else R.drawable.ic_view_list
-                                ),
-                                contentDescription = null,
-                            )
+                    },
+                    actions = {
+                        if (items.itemCount > 0) {
+                            IconButton(onClick = { showSortByDialog = true }) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_arrow_down_up),
+                                    contentDescription = null,
+                                )
+                            }
+                            IconButton(onClick = { onAction(LibraryAction.ToggleViewMode) }) {
+                                Icon(
+                                    painter = painterResource(
+                                        if (state.isListView) R.drawable.ic_view_grid else R.drawable.ic_view_list
+                                    ),
+                                    contentDescription = null,
+                                )
+                            }
+                            IconButton(onClick = { onAction(LibraryAction.OnEnterSelectionMode) }) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_check),
+                                    contentDescription = null,
+                                )
+                            }
                         }
-                        IconButton(onClick = { onAction(LibraryAction.OnEnterSelectionMode) }) {
+                        IconButton(onClick = { onAction(LibraryAction.ToggleDuplicateFinder) }) {
                             Icon(
-                                painter = painterResource(R.drawable.ic_check),
+                                painter = painterResource(if (state.showOnlyDuplicates) R.drawable.ic_check else R.drawable.ic_sparkles),
                                 contentDescription = null,
-                            )
-                        }
-                    }
-                    IconButton(onClick = { onAction(LibraryAction.ToggleDuplicateFinder) }) {
-                        Icon(
-                            painter = painterResource(if (state.showOnlyDuplicates) R.drawable.ic_check else R.drawable.ic_sparkles),
-                            contentDescription = null,
-                            tint = if (state.showOnlyDuplicates) MaterialTheme.colorScheme.primary 
-                                   else MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                    
-                    // 在选择模式下显示菜单按钮
-                    if (state.selectionMode && state.selectedItems.isNotEmpty()) {
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_dots_vertical),
-                                contentDescription = "More options",
+                                tint = if (state.showOnlyDuplicates) MaterialTheme.colorScheme.primary 
+                                       else MaterialTheme.colorScheme.onSurface,
                             )
                         }
                         
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("删除") },
-                                onClick = {
-                                    onAction(LibraryAction.OnDeleteSelectedItems)
-                                    showMenu = false
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_trash),
-                                        contentDescription = null
-                                    )
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("标记为已观看") },
-                                onClick = {
-                                    onAction(LibraryAction.OnMarkSelectedAsPlayed)
-                                    showMenu = false
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_eye),
-                                        contentDescription = null
-                                    )
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("添加到播放列表") },
-                                onClick = {
-                                    onAction(LibraryAction.OnAddSelectedToPlaylist)
-                                    showMenu = false
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_plus),
-                                        contentDescription = null
-                                    )
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("收藏") },
-                                onClick = {
-                                    onAction(LibraryAction.OnFavoriteSelectedItems)
-                                    showMenu = false
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_heart),
-                                        contentDescription = null
-                                    )
-                                }
-                            )
+                        // 在选择模式下显示菜单按钮
+                        if (state.selectionMode && state.selectedItems.isNotEmpty()) {
+                            IconButton(onClick = { showMenu = true }) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_dots_vertical),
+                                    contentDescription = "More options",
+                                )
+                            }
+                            
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("删除") },
+                                    onClick = {
+                                        onAction(LibraryAction.OnDeleteSelectedItems)
+                                        showMenu = false
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_trash),
+                                            contentDescription = null
+                                        )
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("标记为已观看") },
+                                    onClick = {
+                                        onAction(LibraryAction.OnMarkSelectedAsPlayed)
+                                        showMenu = false
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_eye),
+                                            contentDescription = null
+                                        )
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("添加到播放列表") },
+                                    onClick = {
+                                        onAction(LibraryAction.OnAddSelectedToPlaylist)
+                                        showMenu = false
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_plus),
+                                            contentDescription = null
+                                        )
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("收藏") },
+                                    onClick = {
+                                        onAction(LibraryAction.OnFavoriteSelectedItems)
+                                        showMenu = false
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_heart),
+                                            contentDescription = null
+                                        )
+                                    }
+                                )
+                            }
                         }
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-            )
-        },
-        snackbarHost = {
-            SnackbarHost(hostState = snackbarHostState)
-        },
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-    ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column {
-                ErrorGroup(
-                    loadStates = items.loadState,
-                    onRefresh = {
-                        onAction(LibraryAction.OnRefresh)
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(innerPadding),
+                    scrollBehavior = scrollBehavior,
                 )
-                if (state.isListView) {
-                    LazyVerticalGrid(
-                        columns = GridCellsAdaptiveWithMinColumns(minSize = 180.dp, minColumns = 2),
+            },
+            snackbarHost = {
+                SnackbarHost(hostState = snackbarHostState)
+            },
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        ) { innerPadding ->
+            Box(modifier = Modifier.fillMaxSize()) {
+                Column {
+                    ErrorGroup(
+                        loadStates = items.loadState,
+                        onRefresh = {
+                            onAction(LibraryAction.OnRefresh)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(innerPadding),
+                    )
+                    if (state.isListView) {
+                        LazyVerticalGrid(
+                            columns = GridCellsAdaptiveWithMinColumns(minSize = 180.dp, minColumns = 2),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .then(
+                                    if (state.selectionMode) {
+                                        Modifier.graphicsLayer(alpha = 0.7f)
+                                    } else {
+                                        Modifier
+                                    }
+                                ),
+                            contentPadding = innerPadding,
+                            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+                            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+                        ) {
+                            items(
+                                count = items.itemCount,
+                                key = items.itemKey { it.id },
+                            ) {
+                                val item = items[it]
+                                item?.let { item ->
+                                    ItemCard(
+                                        item = item,
+                                        direction = Direction.HORIZONTAL,
+                                        onClick = {
+                                            if (state.selectionMode) {
+                                                onAction(LibraryAction.OnItemSelectionToggle(item))
+                                            } else {
+                                                onAction(LibraryAction.OnItemClick(item))
+                                            }
+                                        },
+                                        onPlayClick = {
+                                            floatingVideoItem = item
+                                        },
+                                        repository = repository,
+                                        selected = state.selectionMode && item in state.selectedItems,
+                                        isDuplicate = item in state.duplicateItems,
+                                        modifier = Modifier.animateItem(),
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        LazyVerticalGrid(
+                            columns = GridCellsAdaptiveWithMinColumns(minSize = 120.dp, minColumns = 3),
                         modifier = Modifier
                             .fillMaxSize()
                             .then(
                                 if (state.selectionMode) {
-                                    Modifier.graphicsLayer(alpha = 0.7f)
+                                    Modifier.graphicsLayer(alpha = 0.7f) // 调浅灰罩颜色
                                 } else {
                                     Modifier
                                 }
@@ -301,91 +345,49 @@ private fun LibraryScreenLayout(
                         ) {
                             val item = items[it]
                             item?.let { item ->
-                                ItemCard(
-                                    item = item,
-                                    direction = Direction.HORIZONTAL,
-                                    onClick = {
-                                        if (state.selectionMode) {
-                                            onAction(LibraryAction.OnItemSelectionToggle(item))
-                                        } else {
-                                            onAction(LibraryAction.OnItemClick(item))
-                                        }
-                                    },
-                                    onPlayClick = {
-                                        floatingVideoItem = item
-                                    },
-                                    repository = repository,
-                                    selected = state.selectionMode && item in state.selectedItems,
-                                    isDuplicate = item in state.duplicateItems,
-                                    modifier = Modifier.animateItem(),
-                                )
+                                    ItemCard(
+                                        item = item,
+                                        direction = Direction.VERTICAL,
+                                        onClick = {
+                                            if (state.selectionMode) {
+                                                onAction(LibraryAction.OnItemSelectionToggle(item))
+                                            } else {
+                                                onAction(LibraryAction.OnItemClick(item))
+                                            }
+                                        },
+                                        onPlayClick = {
+                                            floatingVideoItem = item
+                                        },
+                                        repository = repository,
+                                        selected = state.selectionMode && item in state.selectedItems,
+                                        isDuplicate = item in state.duplicateItems,
+                                        modifier = Modifier.animateItem(),
+                                    )
                             }
                         }
-                    }
-                } else {
-                    LazyVerticalGrid(
-                        columns = GridCellsAdaptiveWithMinColumns(minSize = 120.dp, minColumns = 3),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .then(
-                            if (state.selectionMode) {
-                                Modifier.graphicsLayer(alpha = 0.7f) // 调浅灰罩颜色
-                            } else {
-                                Modifier
-                            }
-                        ),
-                    contentPadding = innerPadding,
-                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
-                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
-                ) {
-                    items(
-                        count = items.itemCount,
-                        key = items.itemKey { it.id },
-                    ) {
-                        val item = items[it]
-                        item?.let { item ->
-                                ItemCard(
-                                    item = item,
-                                    direction = Direction.VERTICAL,
-                                    onClick = {
-                                        if (state.selectionMode) {
-                                            onAction(LibraryAction.OnItemSelectionToggle(item))
-                                        } else {
-                                            onAction(LibraryAction.OnItemClick(item))
-                                        }
-                                    },
-                                    onPlayClick = {
-                                        floatingVideoItem = item
-                                    },
-                                    repository = repository,
-                                    selected = state.selectionMode && item in state.selectedItems,
-                                    isDuplicate = item in state.duplicateItems,
-                                    modifier = Modifier.animateItem(),
-                                )
-                        }
-                    }
-                } // end grid content
-                } // end else (view mode)
+                    } // end grid content
+                    } // end else (view mode)
+                }
+                
+                // 在选择模式下添加半透明覆盖层以增强视觉效果，但排除已选中的项目
+                if (state.selectionMode) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer(alpha = 0.2f)
+                            .background(Color.Black)
+                    )
+                }
             }
-            
-            // 在选择模式下添加半透明覆盖层以增强视觉效果，但排除已选中的项目
-            if (state.selectionMode) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer(alpha = 0.2f)
-                        .background(Color.Black)
-                )
-            }
-
-            floatingVideoItem?.let { item ->
-                FloatingVideoPlayer(
-                    item = item,
-                    repository = repository ?: return@let,
-                    onDismiss = { floatingVideoItem = null },
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                )
-            }
+        }
+        
+        floatingVideoItem?.let { item ->
+            FloatingVideoPlayer(
+                item = item,
+                repository = repository ?: return@let,
+                onDismiss = { floatingVideoItem = null },
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
         }
     }
 
