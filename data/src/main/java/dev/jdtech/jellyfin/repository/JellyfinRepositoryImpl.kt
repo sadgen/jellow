@@ -100,12 +100,21 @@ class JellyfinRepositoryImpl(
                 .toFindroidEpisode(this@JellyfinRepositoryImpl, database)!!
         }
 
-    override suspend fun getMovie(itemId: UUID): FindroidMovie =
+    override suspend fun getMovie(itemId: UUID, fields: List<ItemFields>?): FindroidMovie =
         withContext(Dispatchers.IO) {
-            jellyfinApi.userLibraryApi
-                .getItem(itemId, jellyfinApi.userId!!)
-                .content
-                .toFindroidMovie(this@JellyfinRepositoryImpl, database)
+            val dto = if (fields != null) {
+                val items = jellyfinApi.itemsApi.getItems(
+                    userId = jellyfinApi.userId!!,
+                    ids = listOf(itemId),
+                    fields = fields,
+                    limit = 1,
+                ).content.items
+                items.firstOrNull()
+                    ?: jellyfinApi.userLibraryApi.getItem(itemId, jellyfinApi.userId!!).content
+            } else {
+                jellyfinApi.userLibraryApi.getItem(itemId, jellyfinApi.userId!!).content
+            }
+            dto.toFindroidMovie(this@JellyfinRepositoryImpl, database)
         }
 
     override suspend fun getShow(itemId: UUID): FindroidShow =

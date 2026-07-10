@@ -49,7 +49,7 @@ class JellyfinRepositoryOfflineImpl(
         return emptyList()
     }
 
-    override suspend fun getMovie(itemId: UUID): FindroidMovie =
+    override suspend fun getMovie(itemId: UUID, fields: List<ItemFields>?): FindroidMovie =
         withContext(Dispatchers.IO) {
             database.getMovie(itemId).toFindroidMovie(database, jellyfinApi.userId!!)
         }

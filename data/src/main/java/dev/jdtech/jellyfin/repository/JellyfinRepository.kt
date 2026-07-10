@@ -28,7 +28,7 @@ interface JellyfinRepository {
 
     suspend fun getEpisode(itemId: UUID): FindroidEpisode
 
-    suspend fun getMovie(itemId: UUID): FindroidMovie
+    suspend fun getMovie(itemId: UUID, fields: List<ItemFields>? = null): FindroidMovie
 
     suspend fun getShow(itemId: UUID): FindroidShow
 

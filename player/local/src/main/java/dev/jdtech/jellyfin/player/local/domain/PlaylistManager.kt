@@ -44,7 +44,7 @@ class PlaylistManager @Inject internal constructor(
         val initialItem =
             when (itemKind) {
                 BaseItemKind.MOVIE -> {
-                    val movie = repository.getMovie(itemId)
+                    val movie = repository.getMovie(itemId, fields = listOf(ItemFields.CHAPTERS, ItemFields.TRICKPLAY))
                     val additionalParts = repository.getAdditionalParts(itemId)
 
                     items = listOf(movie) + additionalParts
