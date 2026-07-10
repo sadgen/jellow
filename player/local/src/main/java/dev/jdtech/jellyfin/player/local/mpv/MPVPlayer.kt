@@ -315,8 +315,6 @@ class MPVPlayer(
     private var initialIndex: Int = 0
     private var initialSeekTo: Long = 0L
     private var oldMediaItem: MediaItem? = null
-    private var pendingUris: MutableList<String>? = null
-    private var hasSurface: Boolean = false
 
     // mpv events
     override fun eventProperty(property: String) {
@@ -836,35 +834,27 @@ class MPVPlayer(
 
     /** Prepares the player. */
     override fun prepare() {
-        pendingUris = internalMediaItems.mapNotNull { it.localConfiguration?.uri?.toString() }.toMutableList()
-        prepareMediaItem(initialIndex)
-        loadPending()
-    }
-
-    private fun loadPending() {
-        if (!hasSurface || pendingUris == null) return
-        pendingUris!!.forEachIndexed { index, uri ->
+        internalMediaItems.forEachIndexed { index, mediaItem ->
             mpvLib.command(
                 arrayOf(
                     "loadfile",
-                    uri,
+                    "${mediaItem.localConfiguration?.uri}",
                     if (index == 0) "replace" else "append",
                 )
             )
-        }
-        val currentItem = internalMediaItems.getOrNull(currentMediaItemIndex)
-        currentItem?.localConfiguration?.subtitleConfigurations?.forEach { subtitle ->
-            initialCommands.add(
-                arrayOf(
-                    "sub-add",
-                    "${subtitle.uri}",
-                    "auto",
-                    "${subtitle.label}",
-                    "${subtitle.language}",
+            mediaItem.localConfiguration?.subtitleConfigurations?.forEach { subtitle ->
+                initialCommands.add(
+                    arrayOf(
+                        /* command= */ "sub-add",
+                        /* url= */ "${subtitle.uri}",
+                        /* flags= */ "auto",
+                        /* title= */ "${subtitle.label}",
+                        /* lang= */ "${subtitle.language}",
+                    )
                 )
-            )
+            }
         }
-        pendingUris = null
+        prepareMediaItem(initialIndex)
     }
 
     /**
@@ -1267,11 +1257,7 @@ class MPVPlayer(
      * player.
      */
     override fun clearVideoSurface() {
-        mpvLib.setOptionString("vo", "null")
-        mpvLib.setOptionString("force-window", "no")
-        mpvLib.detachSurface()
-        textureViewSurface?.release()
-        textureViewSurface = null
+        TODO("Not yet implemented")
     }
 
     /**
@@ -1336,12 +1322,6 @@ class MPVPlayer(
      */
     override fun setVideoSurfaceView(surfaceView: SurfaceView?) {
         surfaceView?.holder?.addCallback(surfaceHolder)
-        if (surfaceView?.holder?.surface?.isValid == true) {
-            hasSurface = true
-            mpvLib.attachSurface(surfaceView.holder.surface)
-            mpvLib.setOptionString("force-window", "yes")
-            loadPending()
-        }
     }
 
     /**
@@ -1534,8 +1514,6 @@ class MPVPlayer(
                 mpvLib.attachSurface(holder.surface)
                 mpvLib.setOptionString("force-window", "yes")
                 mpvLib.setOptionString("vo", videoOutput)
-                hasSurface = true
-                loadPending()
             }
 
             /**
@@ -1569,7 +1547,6 @@ class MPVPlayer(
                 mpvLib.setOptionString("vo", "null")
                 mpvLib.setOptionString("force-window", "no")
                 mpvLib.detachSurface()
-                hasSurface = false
             }
         }
 
