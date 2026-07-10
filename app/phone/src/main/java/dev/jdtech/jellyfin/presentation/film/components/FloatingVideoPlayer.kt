@@ -87,6 +87,8 @@ fun FloatingVideoPlayer(
     var dragSeekPos by remember { mutableLongStateOf(0L) }
     var dragStartPosition by remember { mutableLongStateOf(0L) }
     var scrubTimeText by remember { mutableStateOf("") }
+    var currentPosition by remember { mutableLongStateOf(0L) }
+    var playerDuration by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(item.id) {
         val exoPlayer = ExoPlayer.Builder(context).build()
@@ -137,8 +139,14 @@ fun FloatingVideoPlayer(
         var lastBytes = 0L
         var lastTimeMs = 0L
         while (isActive) {
-            delay(1000)
+            delay(250)
             val p = player ?: continue
+            // Update position every 250ms for smooth progress bar
+            currentPosition = p.currentPosition
+            playerDuration = p.duration.coerceAtLeast(0)
+
+            // Bitrate and traffic still update every 1s
+            val now = System.currentTimeMillis()
             val format = p.videoFormat
             if (format != null && format.bitrate > 0) {
                 bitrateText = if (format.bitrate >= 1_000_000) {
@@ -149,23 +157,24 @@ fun FloatingVideoPlayer(
             } else {
                 bitrateText = ""
             }
-            val bufferedUs = p.bufferedPosition
-            val currTimeMs = System.currentTimeMillis()
-            if (lastTimeMs > 0 && bufferedUs > lastBytes) {
-                val deltaBytes = bufferedUs - lastBytes
-                val deltaTime = (currTimeMs - lastTimeMs) / 1000f
-                if (deltaTime > 0) {
-                    val speedMbps = (deltaBytes * 8f) / (deltaTime * 1_000_000f)
-                    if (speedMbps > 0.1f) {
-                        trafficText = String.format("%.1f Mbps", speedMbps)
-                    } else {
-                        val speedKBps = (deltaBytes) / (deltaTime * 1000f)
-                        trafficText = String.format("%.0f KB/s", speedKBps)
+            if (now - lastTimeMs >= 1000) {
+                val bufferedUs = p.bufferedPosition
+                if (lastTimeMs > 0 && bufferedUs > lastBytes) {
+                    val deltaBytes = bufferedUs - lastBytes
+                    val deltaTime = (now - lastTimeMs) / 1000f
+                    if (deltaTime > 0) {
+                        val speedMbps = (deltaBytes * 8f) / (deltaTime * 1_000_000f)
+                        if (speedMbps > 0.1f) {
+                            trafficText = String.format("%.1f Mbps", speedMbps)
+                        } else {
+                            val speedKBps = (deltaBytes) / (deltaTime * 1000f)
+                            trafficText = String.format("%.0f KB/s", speedKBps)
+                        }
                     }
                 }
+                lastBytes = bufferedUs
+                lastTimeMs = now
             }
-            lastBytes = bufferedUs
-            lastTimeMs = currTimeMs
         }
     }
 
@@ -310,6 +319,25 @@ fun FloatingVideoPlayer(
                     },
                     modifier = Modifier.fillMaxSize(),
                 )
+
+                if (playerDuration > 0) {
+                    val progress = if (isScrubbing) scrubFraction
+                                  else (currentPosition.toFloat() / playerDuration.toFloat()).coerceIn(0f, 1f)
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .height(3.dp)
+                            .background(Color.White.copy(alpha = 0.3f))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(progress)
+                                .matchParentSize()
+                                .background(Color(0xFF00A8FF))
+                        )
+                    }
+                }
 
                 if (isScrubbing) {
                     Popup(
