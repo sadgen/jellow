@@ -184,15 +184,13 @@ fun FloatingVideoPlayer(
                             resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
 
                             val gestureDetector = GestureDetector(ctx, object : GestureDetector.SimpleOnGestureListener() {
-                                override fun onLongPress(e: MotionEvent) {
-                                    isScrubbing = true
-                                    scrubFraction = (e.x / width).coerceIn(0f, 1f)
-                                }
                                 override fun onScroll(e1: MotionEvent?, e2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
-                                    if (isScrubbing) {
+                                    kotlin.math.abs(distanceX).let { if (it > kotlin.math.abs(distanceY) && it > 2f) {
+                                        isScrubbing = true
                                         scrubFraction = (e2.x / width).coerceIn(0f, 1f)
-                                    }
-                                    return isScrubbing
+                                        return true
+                                    }}
+                                    return false
                                 }
                             })
 

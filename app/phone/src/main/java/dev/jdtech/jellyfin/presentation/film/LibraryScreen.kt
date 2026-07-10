@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -164,15 +165,21 @@ private fun LibraryScreenLayout(
     val density = LocalDensity.current
 
     fun openFloatingWindow(item: FindroidItem) {
-        val approxWindowHeightDp = 260f
-        val windowHeightPx = with(density) { approxWindowHeightDp.dp.toPx() }
-        val step = windowHeightPx * 2f / 3f
-        val baseOffset = with(density) { 60.dp.toPx() }
-        val lastOffset = if (floatingWindows.isEmpty()) baseOffset
-                         else floatingWindows.last().initialOffsetY
-        val newOffset = lastOffset + step
-        val newWindow = FloatingWindowInfo(item = item, initialOffsetY = newOffset)
-        floatingWindows = (floatingWindows + newWindow).takeLast(3)
+        if (floatingWindows.size >= 3) {
+            val updated = floatingWindows.toMutableList()
+            updated[0] = updated[0].copy(item = item)
+            floatingWindows = updated
+        } else {
+            val approxWindowHeightDp = 260f
+            val windowHeightPx = with(density) { approxWindowHeightDp.dp.toPx() }
+            val step = windowHeightPx * 2f / 3f
+            val baseOffset = with(density) { 60.dp.toPx() }
+            val lastOffset = if (floatingWindows.isEmpty()) baseOffset
+                             else floatingWindows.last().initialOffsetY
+            val newOffset = lastOffset + step
+            val newWindow = FloatingWindowInfo(item = item, initialOffsetY = newOffset)
+            floatingWindows = floatingWindows + newWindow
+        }
     }
 
     fun closeFloatingWindow(item: FindroidItem) {
@@ -358,6 +365,8 @@ private fun LibraryScreenLayout(
                                                     putExtra("itemId", clickedItem.id.toString())
                                                     putExtra("itemKind", itemKind?.serialName ?: "")
                                                     putExtra("startInVr", true)
+                                                    putExtra("startFromBeginning", true)
+                                                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
                                                 }
                                                 context.startActivity(intent)
                                             } else {
@@ -419,6 +428,8 @@ private fun LibraryScreenLayout(
                                                     putExtra("itemId", clickedItem.id.toString())
                                                     putExtra("itemKind", itemKind?.serialName ?: "")
                                                     putExtra("startInVr", true)
+                                                    putExtra("startFromBeginning", true)
+                                                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
                                                 }
                                                 context.startActivity(intent)
                                             } else {
@@ -449,13 +460,15 @@ private fun LibraryScreenLayout(
         }
         
         floatingWindows.forEach { window ->
-            FloatingVideoPlayer(
-                item = window.item,
-                repository = repository ?: return@forEach,
-                onDismiss = { closeFloatingWindow(window.item) },
-                initialOffsetY = window.initialOffsetY,
-                modifier = Modifier.align(Alignment.TopCenter),
-            )
+            key(window.item.id) {
+                FloatingVideoPlayer(
+                    item = window.item,
+                    repository = repository ?: return@forEach,
+                    onDismiss = { closeFloatingWindow(window.item) },
+                    initialOffsetY = window.initialOffsetY,
+                    modifier = Modifier.align(Alignment.TopCenter),
+                )
+            }
         }
     }
 
