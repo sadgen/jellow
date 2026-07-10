@@ -2,7 +2,7 @@ package dev.jdtech.jellyfin.presentation.film.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -34,9 +34,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
-import androidx.compose.ui.viewinterop.AndroidView
 import kotlin.math.roundToInt
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
@@ -59,9 +59,11 @@ fun FloatingVideoPlayer(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val density = LocalDensity.current
+    val initialOffsetY = with(density) { 120.dp.toPx() }
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     var offsetX by remember { mutableFloatStateOf(0f) }
-    var offsetY by remember { mutableFloatStateOf(0f) }
+    var offsetY by remember { mutableFloatStateOf(initialOffsetY) }
     var trickplayInfo by remember { mutableStateOf<FindroidTrickplayInfo?>(null) }
     var isScrubbing by remember { mutableStateOf(false) }
     var scrubFraction by remember { mutableFloatStateOf(0f) }
@@ -137,7 +139,7 @@ fun FloatingVideoPlayer(
                         )
                         IconButton(onClick = onDismiss) {
                             Icon(
-                                painter = painterResource(R.drawable.ic_close),
+                                painter = painterResource(R.drawable.ic_x),
                                 contentDescription = "Close",
                                 tint = Color.White,
                             )
@@ -152,33 +154,33 @@ fun FloatingVideoPlayer(
                     .aspectRatio(16f / 9f)
                     .background(Color.Black),
             ) {
-                player?.let { currentPlayer ->
-                    AndroidView(
-                        factory = { ctx ->
-                            PlayerView(ctx).apply {
-                                player = currentPlayer
-                                useController = true
-                                setShowNextButton(false)
-                                setShowPreviousButton(false)
-                                setShowFastForwardButton(true)
-                                setShowRewindButton(true)
-                                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
-                            }
-                        },
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
+                AndroidView(
+                    factory = { ctx ->
+                        PlayerView(ctx).apply {
+                            useController = true
+                            setShowNextButton(false)
+                            setShowPreviousButton(false)
+                            setShowFastForwardButton(true)
+                            setShowRewindButton(true)
+                            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
+                        }
+                    },
+                    update = { playerView ->
+                        playerView.player = player
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
 
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .pointerInput(Unit) {
-                            detectHorizontalDragGestures(
+                            detectDragGesturesAfterLongPress(
                                 onDragStart = { offset ->
                                     isScrubbing = true
                                     scrubFraction = (offset.x / size.width).coerceIn(0f, 1f)
                                 },
-                                onHorizontalDrag = { change, _ ->
+                                onDrag = { change, _ ->
                                     scrubFraction = (change.position.x / size.width).coerceIn(0f, 1f)
                                 },
                                 onDragEnd = {
