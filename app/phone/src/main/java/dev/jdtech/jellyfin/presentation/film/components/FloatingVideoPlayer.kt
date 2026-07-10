@@ -2,7 +2,6 @@ package dev.jdtech.jellyfin.presentation.film.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,8 +36,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import android.view.GestureDetector
+import android.view.MotionEvent
+import androidx.media3.common.VideoSize
 import kotlin.math.roundToInt
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
@@ -67,10 +70,17 @@ fun FloatingVideoPlayer(
     var trickplayInfo by remember { mutableStateOf<FindroidTrickplayInfo?>(null) }
     var isScrubbing by remember { mutableStateOf(false) }
     var scrubFraction by remember { mutableFloatStateOf(0f) }
+    var videoSize by remember { mutableStateOf<VideoSize?>(null) }
 
     LaunchedEffect(item.id) {
         val exoPlayer = ExoPlayer.Builder(context).build()
         player = exoPlayer
+
+        exoPlayer.addListener(object : Player.Listener {
+            override fun onVideoSizeChanged(size: VideoSize) {
+                videoSize = size
+            }
+        })
 
         val source = withContext(Dispatchers.IO) {
             val sources = repository.getMediaSources(item.id, true, false)
@@ -104,6 +114,14 @@ fun FloatingVideoPlayer(
                 release()
             }
             player = null
+        }
+    }
+
+    val aspectRatio = remember(videoSize) {
+        if (videoSize != null && videoSize!!.width > 0 && videoSize!!.height > 0) {
+            videoSize!!.width.toFloat() / videoSize!!.height.toFloat()
+        } else {
+            16f / 9f
         }
     }
 
@@ -151,7 +169,7 @@ fun FloatingVideoPlayer(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(16f / 9f)
+                    .aspectRatio(aspectRatio)
                     .background(Color.Black),
             ) {
                 AndroidView(
@@ -163,36 +181,35 @@ fun FloatingVideoPlayer(
                             setShowFastForwardButton(true)
                             setShowRewindButton(true)
                             resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
+
+                            val gestureDetector = GestureDetector(ctx, object : GestureDetector.SimpleOnGestureListener() {
+                                override fun onLongPress(e: MotionEvent) {
+                                    isScrubbing = true
+                                    scrubFraction = (e.x / width).coerceIn(0f, 1f)
+                                }
+                                override fun onScroll(e1: MotionEvent?, e2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
+                                    if (isScrubbing) {
+                                        scrubFraction = (e2.x / width).coerceIn(0f, 1f)
+                                    }
+                                    return isScrubbing
+                                }
+                            })
+
+                            setOnTouchListener { _, event ->
+                                gestureDetector.onTouchEvent(event)
+                                if (event.action == MotionEvent.ACTION_UP && isScrubbing) {
+                                    isScrubbing = false
+                                    val seekPos = (scrubFraction * (player?.duration ?: 0L)).toLong()
+                                    player?.seekTo(seekPos)
+                                }
+                                false
+                            }
                         }
                     },
                     update = { playerView ->
                         playerView.player = player
                     },
                     modifier = Modifier.fillMaxSize(),
-                )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .pointerInput(Unit) {
-                            detectDragGesturesAfterLongPress(
-                                onDragStart = { offset ->
-                                    isScrubbing = true
-                                    scrubFraction = (offset.x / size.width).coerceIn(0f, 1f)
-                                },
-                                onDrag = { change, _ ->
-                                    scrubFraction = (change.position.x / size.width).coerceIn(0f, 1f)
-                                },
-                                onDragEnd = {
-                                    isScrubbing = false
-                                    val seekPos = (scrubFraction * (player?.duration ?: 0L)).toLong()
-                                    player?.seekTo(seekPos)
-                                },
-                                onDragCancel = {
-                                    isScrubbing = false
-                                },
-                            )
-                        }
                 )
 
                 if (isScrubbing && trickplayInfo != null) {
