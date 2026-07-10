@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
@@ -59,7 +60,13 @@ import dev.jdtech.jellyfin.film.presentation.library.LibraryAction
 import dev.jdtech.jellyfin.film.presentation.library.LibraryState
 import dev.jdtech.jellyfin.film.presentation.library.LibraryViewModel
 import dev.jdtech.jellyfin.models.CollectionType
+import dev.jdtech.jellyfin.models.FindroidBoxSet
+import dev.jdtech.jellyfin.models.FindroidEpisode
+import dev.jdtech.jellyfin.models.FindroidFolder
 import dev.jdtech.jellyfin.models.FindroidItem
+import dev.jdtech.jellyfin.models.FindroidMovie
+import dev.jdtech.jellyfin.models.FindroidSeason
+import dev.jdtech.jellyfin.models.FindroidShow
 import dev.jdtech.jellyfin.presentation.components.ErrorDialog
 import dev.jdtech.jellyfin.presentation.film.components.Direction
 import dev.jdtech.jellyfin.presentation.film.components.ErrorCard
@@ -140,13 +147,37 @@ private fun LibraryScreenLayout(
     snackbarHostState: SnackbarHostState,
 ) {
     val items = state.items.collectAsLazyPagingItems()
+    val context = LocalContext.current
     var showSortByDialog by rememberSaveable { mutableStateOf(false) }
 
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     
     // 添加状态以控制菜单显示
     var showMenu by remember { mutableStateOf(false) }
-    var floatingVideoItem by remember { mutableStateOf<FindroidItem?>(null) }
+
+    data class FloatingWindowInfo(
+        val item: FindroidItem,
+        val initialOffsetY: Float,
+    )
+
+    var floatingWindows by remember { mutableStateOf(listOf<FloatingWindowInfo>()) }
+    val density = LocalDensity.current
+
+    fun openFloatingWindow(item: FindroidItem) {
+        val approxWindowHeightDp = 260f
+        val windowHeightPx = with(density) { approxWindowHeightDp.dp.toPx() }
+        val step = windowHeightPx * 2f / 3f
+        val baseOffset = with(density) { 60.dp.toPx() }
+        val lastOffset = if (floatingWindows.isEmpty()) baseOffset
+                         else floatingWindows.last().initialOffsetY
+        val newOffset = lastOffset + step
+        val newWindow = FloatingWindowInfo(item = item, initialOffsetY = newOffset)
+        floatingWindows = (floatingWindows + newWindow).takeLast(3)
+    }
+
+    fun closeFloatingWindow(item: FindroidItem) {
+        floatingWindows = floatingWindows.filter { it.item.id != item.id }
+    }
 
     Box(Modifier.fillMaxSize()) {
         Scaffold(
@@ -312,8 +343,26 @@ private fun LibraryScreenLayout(
                                                 onAction(LibraryAction.OnItemClick(item))
                                             }
                                         },
-                                        onPlayClick = {
-                                            floatingVideoItem = item
+                                        onPlayClick = { clickedItem ->
+                                            if (clickedItem.name.contains("vr", ignoreCase = true)) {
+                                                val itemKind = when (clickedItem) {
+                                                    is FindroidMovie -> BaseItemKind.MOVIE
+                                                    is FindroidEpisode -> BaseItemKind.EPISODE
+                                                    is FindroidSeason -> BaseItemKind.SEASON
+                                                    is FindroidShow -> BaseItemKind.SERIES
+                                                    is FindroidBoxSet -> BaseItemKind.BOX_SET
+                                                    is FindroidFolder -> BaseItemKind.FOLDER
+                                                    else -> null
+                                                }
+                                                val intent = Intent(context, PlayerActivity::class.java).apply {
+                                                    putExtra("itemId", clickedItem.id.toString())
+                                                    putExtra("itemKind", itemKind?.serialName ?: "")
+                                                    putExtra("startInVr", true)
+                                                }
+                                                context.startActivity(intent)
+                                            } else {
+                                                openFloatingWindow(clickedItem)
+                                            }
                                         },
                                         repository = repository,
                                         selected = state.selectionMode && item in state.selectedItems,
@@ -330,7 +379,7 @@ private fun LibraryScreenLayout(
                             .fillMaxSize()
                             .then(
                                 if (state.selectionMode) {
-                                    Modifier.graphicsLayer(alpha = 0.7f) // 调浅灰罩颜色
+                                    Modifier.graphicsLayer(alpha = 0.7f)
                                 } else {
                                     Modifier
                                 }
@@ -355,8 +404,26 @@ private fun LibraryScreenLayout(
                                                 onAction(LibraryAction.OnItemClick(item))
                                             }
                                         },
-                                        onPlayClick = {
-                                            floatingVideoItem = item
+                                        onPlayClick = { clickedItem ->
+                                            if (clickedItem.name.contains("vr", ignoreCase = true)) {
+                                                val itemKind = when (clickedItem) {
+                                                    is FindroidMovie -> BaseItemKind.MOVIE
+                                                    is FindroidEpisode -> BaseItemKind.EPISODE
+                                                    is FindroidSeason -> BaseItemKind.SEASON
+                                                    is FindroidShow -> BaseItemKind.SERIES
+                                                    is FindroidBoxSet -> BaseItemKind.BOX_SET
+                                                    is FindroidFolder -> BaseItemKind.FOLDER
+                                                    else -> null
+                                                }
+                                                val intent = Intent(context, PlayerActivity::class.java).apply {
+                                                    putExtra("itemId", clickedItem.id.toString())
+                                                    putExtra("itemKind", itemKind?.serialName ?: "")
+                                                    putExtra("startInVr", true)
+                                                }
+                                                context.startActivity(intent)
+                                            } else {
+                                                openFloatingWindow(clickedItem)
+                                            }
                                         },
                                         repository = repository,
                                         selected = state.selectionMode && item in state.selectedItems,
@@ -381,11 +448,12 @@ private fun LibraryScreenLayout(
             }
         }
         
-        floatingVideoItem?.let { item ->
+        floatingWindows.forEach { window ->
             FloatingVideoPlayer(
-                item = item,
-                repository = repository ?: return@let,
-                onDismiss = { floatingVideoItem = null },
+                item = window.item,
+                repository = repository ?: return@forEach,
+                onDismiss = { closeFloatingWindow(window.item) },
+                initialOffsetY = window.initialOffsetY,
                 modifier = Modifier.align(Alignment.TopCenter),
             )
         }

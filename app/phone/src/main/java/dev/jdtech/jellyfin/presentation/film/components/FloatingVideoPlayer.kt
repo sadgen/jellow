@@ -59,14 +59,15 @@ fun FloatingVideoPlayer(
     item: FindroidItem,
     repository: JellyfinRepository,
     onDismiss: () -> Unit,
+    initialOffsetY: Float? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
-    val initialOffsetY = with(density) { 120.dp.toPx() }
+    val resolvedOffsetY = initialOffsetY ?: with(density) { 120.dp.toPx() }
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     var offsetX by remember { mutableFloatStateOf(0f) }
-    var offsetY by remember { mutableFloatStateOf(initialOffsetY) }
+    var offsetY by remember { mutableFloatStateOf(resolvedOffsetY) }
     var trickplayInfo by remember { mutableStateOf<FindroidTrickplayInfo?>(null) }
     var isScrubbing by remember { mutableStateOf(false) }
     var scrubFraction by remember { mutableFloatStateOf(0f) }
@@ -175,7 +176,7 @@ fun FloatingVideoPlayer(
                 AndroidView(
                     factory = { ctx ->
                         PlayerView(ctx).apply {
-                            useController = true
+                            useController = false
                             setShowNextButton(false)
                             setShowPreviousButton(false)
                             setShowFastForwardButton(true)
