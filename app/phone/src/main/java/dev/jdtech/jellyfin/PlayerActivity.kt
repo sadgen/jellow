@@ -793,7 +793,9 @@ class PlayerActivity : BasePlayerActivity() {
             }
             
             viewModel.player.setVideoSurfaceView(binding.sphericalView)
-            btnVr.setColorFilter(Color.parseColor("#00a0d6"))
+            if (::btnVr.isInitialized) {
+                btnVr.setColorFilter(Color.parseColor("#00a0d6"))
+            }
             
             // Center the view after a short delay to ensure rendering started
             handler.postDelayed({ centerVrView() }, 500)
@@ -816,7 +818,9 @@ class PlayerActivity : BasePlayerActivity() {
                  viewModel.player.clearVideoSurface()
             }
             
-            btnVr.clearColorFilter()
+            if (::btnVr.isInitialized) {
+                btnVr.clearColorFilter()
+            }
         }
     }
 
@@ -1021,7 +1025,13 @@ class PlayerActivity : BasePlayerActivity() {
                 )
             }
 
-        if (aspectRatio == null) return builder.build()
+        if (aspectRatio == null) {
+            val basicBuilder = PictureInPictureParams.Builder()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                basicBuilder.setAutoEnterEnabled(enableAutoEnter)
+            }
+            return basicBuilder.build()
+        }
 
         val sourceRectHint =
             if (displayAspectRatio < aspectRatio) {

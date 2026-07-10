@@ -30,6 +30,7 @@ import dev.jdtech.jellyfin.models.FindroidSources
 import dev.jdtech.jellyfin.models.FindroidTrickplayInfo
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 /**
@@ -69,6 +70,7 @@ fun TrickplayPreview(
     var cachedSpriteBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
     LaunchedEffect(spriteIndex, tileInSprite) {
+        delay(80) // 防抖：防止快速拖动时频繁取消网络请求
         withContext(Dispatchers.IO) {
             try {
                 val spriteBitmap = if (spriteIndex == cachedSpriteIndex && cachedSpriteBitmap != null) {
