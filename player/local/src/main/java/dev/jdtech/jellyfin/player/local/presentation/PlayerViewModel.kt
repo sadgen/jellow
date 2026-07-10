@@ -31,9 +31,8 @@ import dev.jdtech.jellyfin.settings.domain.Constants
 import java.util.UUID
 import javax.inject.Inject
 import kotlin.math.ceil
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -104,6 +103,8 @@ constructor(
     var playbackSpeed: Float = 1f
 
     var isInPictureInPictureMode: Boolean = false
+    private var listenerAdded = false
+    private var progressJob: Job? = null
     private val _playerVrMode = MutableStateFlow(appPreferences.getValue(appPreferences.playerVrMode))
     val playerVrMode = _playerVrMode.asStateFlow()
     private val _playerVrProjection = MutableStateFlow(appPreferences.getValue(appPreferences.playerVrProjection))
@@ -187,7 +188,10 @@ constructor(
         startItemIndex: Int? = null,
         forceTranscode: Boolean = false,
     ) {
-        player.addListener(this)
+        if (!listenerAdded) {
+            player.addListener(this)
+            listenerAdded = true
+        }
 
         viewModelScope.launch {
             val isAudio = itemKind == BaseItemKind.AUDIO.serialName
@@ -265,12 +269,11 @@ constructor(
         return mediaItem
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     private fun releasePlayer() {
         val mediaId = player.currentMediaItem?.mediaId
         val position = player.currentPosition
         val duration = player.duration
-        GlobalScope.launch {
+        viewModelScope.launch {
             delay(200L)
             try {
                 if (mediaId != null && duration != C.TIME_UNSET) {
@@ -312,7 +315,8 @@ constructor(
 
     fun updatePlaybackProgress() {
         Timber.d("Updating playback progress")
-        viewModelScope.launch(Dispatchers.Main) {
+        progressJob?.cancel()
+        progressJob = viewModelScope.launch(Dispatchers.Main) {
             savedStateHandle["position"] = player.currentPosition
             if (player.currentMediaItem != null && player.currentMediaItem!!.mediaId.isNotEmpty()) {
                 val itemId = UUID.fromString(player.currentMediaItem!!.mediaId)

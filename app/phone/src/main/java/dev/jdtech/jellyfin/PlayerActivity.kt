@@ -209,18 +209,10 @@ class PlayerActivity : BasePlayerActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         binding.playerView.player = viewModel.player
-        binding.playerView.setControllerVisibilityListener(
-            PlayerView.ControllerVisibilityListener { visibility ->
-                if (visibility == View.GONE) {
-                    hideSystemUI()
-                }
-                // 同步进度条容器的显示/隐藏状态
-                val progressBarContainer = binding.playerView.findViewById<View>(R.id.progress_bar_container)
-                progressBarContainer.visibility = visibility
-                // Update progress bar position based on orientation
-                updateProgressBarPosition()
-            },
-        )
+
+        if (startInVr) {
+            updateVrMode(true)
+        }
 
         // Disable clipping on the internal content frame to allow panning zoomed content
         // Note: We use the resource ID from the library if available, or just assume it exists
@@ -350,6 +342,9 @@ class PlayerActivity : BasePlayerActivity() {
 
                             binding.playerView.setControllerVisibilityListener(
                                 PlayerView.ControllerVisibilityListener { visibility ->
+                                    if (visibility == View.GONE) {
+                                        hideSystemUI()
+                                    }
                                     if (skipButtonTimeoutExpired && currentSegment != null) {
                                         skipSegmentButton.visibility = visibility
                                     }
@@ -654,7 +649,7 @@ class PlayerActivity : BasePlayerActivity() {
                         }
                     }
                 }
-                handler.postDelayed(vrSteeringRunnable!!, VR_STEERING_DELAY)
+                handler.postDelayed(vrSteeringRunnable ?: return false, VR_STEERING_DELAY)
                 return false
             }
             MotionEvent.ACTION_MOVE -> {
@@ -964,7 +959,8 @@ class PlayerActivity : BasePlayerActivity() {
                     ?.mediaTrackGroup?.getFormat(0)?.bitrate?.toLong()
                 val prefBitrate = appPreferences.getValue(appPreferences.playerTranscodingBitrate).toLong() * 1_000_000
                 val bitrate = formatBitrate ?: prefBitrate
-                val bytesDownloaded = ((bufferDelta / 1000.0) * (bitrate / 8.0)).toLong()
+                val bufferedSeconds = bufferDelta / 1_000_000.0
+                val bytesDownloaded = (bufferedSeconds * (bitrate / 8.0)).toLong()
                 currentDownloadSpeedMbps = (bytesDownloaded * 8 / timeDelta) / 1_000_000.0
                 totalBytesDownloaded += bytesDownloaded
             }
@@ -990,6 +986,11 @@ class PlayerActivity : BasePlayerActivity() {
             bytes < 1024 * 1024 * 1024 -> String.format("%.1f MB", bytes / (1024.0 * 1024.0))
             else -> String.format("%.1f GB", bytes / (1024.0 * 1024.0 * 1024.0))
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        handler.removeCallbacksAndMessages(null)
     }
 
     private fun finishPlayback() {
@@ -1020,8 +1021,10 @@ class PlayerActivity : BasePlayerActivity() {
                 )
             }
 
+        if (aspectRatio == null) return builder.build()
+
         val sourceRectHint =
-            if (displayAspectRatio < aspectRatio!!) {
+            if (displayAspectRatio < aspectRatio) {
                 val space =
                     ((binding.playerView.height -
                             (binding.playerView.width.toFloat() / aspectRatio.toFloat())) / 2)

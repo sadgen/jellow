@@ -47,7 +47,8 @@ class PreviewScrubListener(
 
         try {
             val trickplay = currentTrickplay ?: return
-            val image = trickplay.images[position.div(trickplay.interval).toInt()]
+            val idx = (position / trickplay.interval).toInt().coerceIn(0, trickplay.images.lastIndex)
+            val image = trickplay.images[idx]
 
             val parent = scrubbingPreview.parent as ViewGroup
 

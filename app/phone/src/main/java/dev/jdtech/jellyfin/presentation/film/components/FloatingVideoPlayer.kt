@@ -1,5 +1,6 @@
 package dev.jdtech.jellyfin.presentation.film.components
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
@@ -29,8 +30,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -88,6 +91,7 @@ fun FloatingVideoPlayer(
     var scrubTimeText by remember { mutableStateOf("") }
     var currentPosition by remember { mutableLongStateOf(0L) }
     var playerDuration by remember { mutableLongStateOf(0L) }
+    var containerWidth by remember { mutableFloatStateOf(0f) }
 
     LaunchedEffect(item.id) {
         val exoPlayer = ExoPlayer.Builder(context).build()
@@ -123,7 +127,7 @@ fun FloatingVideoPlayer(
         }
     }
 
-    DisposableEffect(Unit) {
+    DisposableEffect(item.id) {
         onDispose {
             player?.apply {
                 playWhenReady = false
@@ -181,8 +185,9 @@ fun FloatingVideoPlayer(
     }
 
     val aspectRatio = remember(videoSize) {
-        if (videoSize != null && videoSize!!.width > 0 && videoSize!!.height > 0) {
-            videoSize!!.width.toFloat() / videoSize!!.height.toFloat()
+        val vs = videoSize
+        if (vs != null && vs.width > 0 && vs.height > 0) {
+            vs.width.toFloat() / vs.height.toFloat()
         } else {
             16f / 9f
         }
@@ -244,7 +249,10 @@ fun FloatingVideoPlayer(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(aspectRatio)
-                    .background(Color.Black),
+                    .background(Color.Black)
+                    .onGloballyPositioned { coordinates ->
+                        containerWidth = coordinates.size.width.toFloat()
+                    },
             ) {
                 AndroidView(
                     factory = { ctx ->
@@ -328,22 +336,40 @@ fun FloatingVideoPlayer(
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
                             .height(3.dp)
-                            .background(Color.White.copy(alpha = 0.3f))
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .fillMaxWidth(progress)
-                                .background(Color(0xFF00A8FF))
-                        )
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val canvasWidth = size.width
+                            val canvasHeight = size.height
+                            val lineY = canvasHeight / 2f
+                            val strokeWidthPx = with(density) { 3.dp.toPx() }
+                            drawLine(
+                                color = Color.White.copy(alpha = 0.3f),
+                                start = Offset(0f, lineY),
+                                end = Offset(canvasWidth, lineY),
+                                strokeWidth = strokeWidthPx,
+                            )
+                            drawLine(
+                                color = Color(0xFF00A8FF),
+                                start = Offset(0f, lineY),
+                                end = Offset(canvasWidth * progress, lineY),
+                                strokeWidth = strokeWidthPx,
+                            )
+                            val thumbRadiusPx = with(density) { 5.dp.toPx() }
+                            drawCircle(
+                                color = Color.White,
+                                radius = thumbRadiusPx,
+                                center = Offset(canvasWidth * progress, lineY),
+                            )
+                        }
                     }
                 }
 
                 if (isScrubbing) {
                     Box(
                         modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = 8.dp)
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 3.dp + 8.dp)
+                            .offset { IntOffset(((scrubFraction - 0.5f) * containerWidth).roundToInt(), 0) }
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             if (trickplayInfo != null) {
@@ -352,6 +378,7 @@ fun FloatingVideoPlayer(
                                     trickplayInfo = trickplayInfo!!,
                                     scrubFraction = scrubFraction,
                                     repository = repository,
+                                    modifier = Modifier.width(200.dp).height(112.dp),
                                 )
                             }
                             Text(
