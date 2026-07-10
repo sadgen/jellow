@@ -386,7 +386,7 @@ private fun LibraryScreenLayout(
                 item = item,
                 repository = repository ?: return@let,
                 onDismiss = { floatingVideoItem = null },
-                modifier = Modifier.align(Alignment.BottomCenter),
+                modifier = Modifier.align(Alignment.TopCenter),
             )
         }
     }

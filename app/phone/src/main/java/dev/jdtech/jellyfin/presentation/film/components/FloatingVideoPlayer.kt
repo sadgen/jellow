@@ -2,10 +2,12 @@ package dev.jdtech.jellyfin.presentation.film.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -27,10 +29,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlin.math.roundToInt
 import androidx.media3.common.MediaItem
@@ -40,6 +45,8 @@ import androidx.media3.ui.PlayerView
 import dev.jdtech.jellyfin.core.R
 import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidSourceType
+import dev.jdtech.jellyfin.models.FindroidSources
+import dev.jdtech.jellyfin.models.FindroidTrickplayInfo
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -55,6 +62,9 @@ fun FloatingVideoPlayer(
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     var offsetX by remember { mutableFloatStateOf(0f) }
     var offsetY by remember { mutableFloatStateOf(0f) }
+    var trickplayInfo by remember { mutableStateOf<FindroidTrickplayInfo?>(null) }
+    var isScrubbing by remember { mutableStateOf(false) }
+    var scrubFraction by remember { mutableFloatStateOf(0f) }
 
     LaunchedEffect(item.id) {
         val exoPlayer = ExoPlayer.Builder(context).build()
@@ -74,6 +84,13 @@ fun FloatingVideoPlayer(
             exoPlayer.prepare()
             exoPlayer.playWhenReady = true
             exoPlayer.play()
+        }
+
+        if (item is FindroidSources) {
+            try {
+                val info = repository.getTrickplayInfoForItem(item.id)
+                trickplayInfo = info
+            } catch (_: Exception) {}
         }
     }
 
@@ -148,8 +165,47 @@ fun FloatingVideoPlayer(
                                 resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
                             }
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxSize(),
                     )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(Unit) {
+                            detectHorizontalDragGestures(
+                                onDragStart = { offset ->
+                                    isScrubbing = true
+                                    scrubFraction = (offset.x / size.width).coerceIn(0f, 1f)
+                                },
+                                onHorizontalDrag = { change, _ ->
+                                    scrubFraction = (change.position.x / size.width).coerceIn(0f, 1f)
+                                },
+                                onDragEnd = {
+                                    isScrubbing = false
+                                    val seekPos = (scrubFraction * (player?.duration ?: 0L)).toLong()
+                                    player?.seekTo(seekPos)
+                                },
+                                onDragCancel = {
+                                    isScrubbing = false
+                                },
+                            )
+                        }
+                )
+
+                if (isScrubbing && trickplayInfo != null) {
+                    Popup(
+                        alignment = Alignment.TopCenter,
+                        offset = IntOffset(0, with(LocalDensity.current) { (-200).dp.roundToPx() }),
+                        properties = PopupProperties(focusable = false),
+                    ) {
+                        TrickplayPreview(
+                            item = item,
+                            trickplayInfo = trickplayInfo!!,
+                            scrubFraction = scrubFraction,
+                            repository = repository,
+                        )
+                    }
                 }
             }
         }
