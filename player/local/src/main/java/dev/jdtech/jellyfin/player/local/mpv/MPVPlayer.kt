@@ -54,9 +54,9 @@ class MPVPlayer(
     private val seekBackIncrement: Long = C.DEFAULT_SEEK_BACK_INCREMENT_MS,
     private val seekForwardIncrement: Long = C.DEFAULT_SEEK_FORWARD_INCREMENT_MS,
     private val pauseAtEndOfMediaItems: Boolean = false,
-    videoOutput: String = "gpu-next",
+    videoOutput: String = "gpu",
     audioOutput: String = "aaudio",
-    hwDec: String = "mediacodec",
+    hwDec: String = "mediacodec,mediacodec-copy",
 ) : BasePlayer(), MPVLib.EventObserver, AudioManager.OnAudioFocusChangeListener {
     private val mpvLib: MPVLib
     private val audioManager: AudioManager by lazy { context.getSystemService()!! }
@@ -98,13 +98,13 @@ class MPVPlayer(
         var pauseAtEndOfMediaItems: Boolean = false
             private set
 
-        var videoOutput: String = "gpu-next"
+        var videoOutput: String = "gpu"
             private set
 
         var audioOutput: String = "aaudio"
             private set
 
-        var hwDec: String = "mediacodec"
+        var hwDec: String = "mediacodec,mediacodec-copy"
             private set
 
         fun setAudioAttributes(audioAttributes: AudioAttributes, handleAudioFocus: Boolean) =
@@ -1267,7 +1267,7 @@ class MPVPlayer(
      * player.
      */
     override fun clearVideoSurface() {
-        mpvLib.setOptionString("vo", "null")
+        mpvLib.setPropertyString("vo", "null")
         mpvLib.setOptionString("force-window", "no")
         mpvLib.detachSurface()
         textureViewSurface?.release()
@@ -1533,7 +1533,6 @@ class MPVPlayer(
             override fun surfaceCreated(holder: SurfaceHolder) {
                 mpvLib.attachSurface(holder.surface)
                 mpvLib.setOptionString("force-window", "yes")
-                mpvLib.setOptionString("vo", videoOutput)
                 hasSurface = true
                 loadPending()
             }
@@ -1566,7 +1565,7 @@ class MPVPlayer(
              * @param holder The SurfaceHolder whose surface is being destroyed.
              */
             override fun surfaceDestroyed(holder: SurfaceHolder) {
-                mpvLib.setOptionString("vo", "null")
+                mpvLib.setPropertyString("vo", "null")
                 mpvLib.setOptionString("force-window", "no")
                 mpvLib.detachSurface()
                 hasSurface = false
@@ -1602,7 +1601,6 @@ class MPVPlayer(
                 mpvLib.attachSurface(s)
                 // Set default options
                 mpvLib.setOptionString("force-window", "yes")
-                mpvLib.setOptionString("vo", videoOutput)
                 mpvLib.setPropertyString("android-surface-size", "${width}x$height")
             }
 
@@ -1613,7 +1611,7 @@ class MPVPlayer(
             override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
                 Timber.d("MPV: onSurfaceTextureDestroyed")
                 try {
-                    mpvLib.setOptionString("vo", "null")
+                    mpvLib.setPropertyString("vo", "null")
                     mpvLib.setOptionString("force-window", "no")
                     mpvLib.detachSurface()
                 } catch (e: Exception) {
