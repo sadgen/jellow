@@ -37,6 +37,9 @@ import androidx.media3.ui.PlayerControlView
 import androidx.media3.ui.PlayerView
 import dagger.hilt.android.AndroidEntryPoint
 import dev.jdtech.jellyfin.databinding.ActivityPlayerBinding
+import android.content.ClipboardManager
+import android.content.ClipData
+import dev.jdtech.jellyfin.player.local.mpv.MPVPlayer
 import dev.jdtech.jellyfin.player.local.presentation.PlayerEvents
 import dev.jdtech.jellyfin.player.local.presentation.PlayerViewModel
 import dev.jdtech.jellyfin.presentation.player.SpeedSelectionDialogFragment
@@ -589,6 +592,20 @@ class PlayerActivity : BasePlayerActivity() {
             previewScrubListener = PreviewScrubListener(imagePreview, timeBar, viewModel.player)
 
             timeBar.addListener(previewScrubListener!!)
+        }
+
+        // 调试：长按视频标题复制 MPV 调试信息
+        videoNameTextView.setOnLongClickListener {
+            val player = viewModel.player
+            if (player is MPVPlayer) {
+                val info = player.getDebugInfo()
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText("MPV Debug", info))
+                android.widget.Toast.makeText(this, "MPV 调试信息已复制到剪贴板", android.widget.Toast.LENGTH_SHORT).show()
+            } else {
+                android.widget.Toast.makeText(this, "当前使用 ExoPlayer，无 MPV 信息", android.widget.Toast.LENGTH_SHORT).show()
+            }
+            true
         }
 
         viewModel.initializePlayer(

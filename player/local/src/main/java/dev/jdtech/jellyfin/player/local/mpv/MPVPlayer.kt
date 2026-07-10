@@ -60,6 +60,9 @@ class MPVPlayer(
 ) : BasePlayer(), MPVLib.EventObserver, AudioManager.OnAudioFocusChangeListener {
     private val mpvLib: MPVLib
     private val audioManager: AudioManager by lazy { context.getSystemService()!! }
+    private val voName: String = videoOutput
+    private val aoName: String = audioOutput
+    private val hwdecName: String = hwDec
     private var audioFocusCallback: () -> Unit = {}
     private lateinit var audioFocusRequest: AudioFocusRequestCompat
     private val handler: Handler = Handler(context.mainLooper)
@@ -198,7 +201,7 @@ class MPVPlayer(
         mpvLib.setOptionString("audio-set-media-role", "yes")
 
         mpvLib.init()
-        Timber.d("MPV: init done, vo=%s, hwdec=%s, ao=%s", videoOutput, hwDec, audioOutput)
+        logDebug("init done, vo=$voName hwdec=$hwdecName ao=$aoName")
 
         mpvLib.addObserver(this)
 
@@ -318,6 +321,30 @@ class MPVPlayer(
     private var initialIndex: Int = 0
     private var initialSeekTo: Long = 0L
     private var oldMediaItem: MediaItem? = null
+
+    // Debug log buffer
+    private val debugLog = java.util.Collections.synchronizedList(mutableListOf<String>())
+    private fun logDebug(msg: String) {
+        val sdf = java.text.SimpleDateFormat("HH:mm:ss.SSS", java.util.Locale.US)
+        val ts = sdf.format(java.util.Date())
+        debugLog.add("[$ts] $msg")
+        if (debugLog.size > 200) debugLog.removeAt(0)
+        Timber.tag("MPV").d(msg)
+    }
+
+    fun getDebugInfo(): String {
+        val sb = StringBuilder()
+        sb.appendLine("=== MPV Debug ===")
+        sb.appendLine("playWhenReady=$currentPlayWhenReady state=$playbackState")
+        sb.appendLine("ready=$isPlayerReady seekable=$isSeekable")
+        sb.appendLine("pos=${currentPositionMs}ms dur=${currentDurationMs}ms")
+        sb.appendLine("vo=$voName ao=$aoName hwdec=$hwdecName")
+        sb.appendLine("items=${internalMediaItems.size}")
+        sb.appendLine()
+        sb.appendLine("--- Log ---")
+        synchronized(debugLog) { for (l in debugLog) sb.appendLine(l) }
+        return sb.toString()
+    }
 
     // mpv events
     override fun eventProperty(property: String) {
@@ -441,6 +468,7 @@ class MPVPlayer(
             when (eventId) {
                 MpvEvent.MPV_EVENT_START_FILE -> {
                     Timber.d("MPV: event START_FILE")
+                    logDebug("event START_FILE")
                     if (!isPlayerReady) {
                         for (command in initialCommands) {
                             mpvLib.command(command)
@@ -449,13 +477,16 @@ class MPVPlayer(
                 }
                 MpvEvent.MPV_EVENT_FILE_LOADED -> {
                     Timber.d("MPV: event FILE_LOADED")
+                    logDebug("event FILE_LOADED")
                     isSeekable = mpvLib.getPropertyBoolean("seekable") == true
                     currentDurationMs =
                         (mpvLib.getPropertyDouble("duration")?.times(C.MILLIS_PER_SECOND))?.toLong()
                     Timber.d("MPV: file loaded, seekable=%s, duration=%s", isSeekable, currentDurationMs)
+                    logDebug("FILE_LOADED seekable=$isSeekable dur=${currentDurationMs}ms")
                 }
                 MpvEvent.MPV_EVENT_SEEK -> {
                     Timber.d("MPV: event SEEK")
+                    logDebug("event SEEK")
                     setPlayerStateAndNotifyIfChanged(playbackState = STATE_BUFFERING)
                     listeners.sendEvent(EVENT_POSITION_DISCONTINUITY) { listener ->
                         @Suppress("DEPRECATION")
@@ -464,12 +495,15 @@ class MPVPlayer(
                 }
                 MpvEvent.MPV_EVENT_PLAYBACK_RESTART -> {
                     Timber.d("MPV: event PLAYBACK_RESTART, isPlayerReady=%s", isPlayerReady)
+                    logDebug("event PLAYBACK_RESTART ready=$isPlayerReady")
                     if (!isPlayerReady) {
                         isPlayerReady = true
                         Timber.d("MPV: first PLAYBACK_RESTART, seeking to initial position")
+                        logDebug("first PLAYBACK_RESTART, setting pause=${!currentPlayWhenReady}")
                         seekTo(C.TIME_UNSET)
                         if (playWhenReady) {
                             Timber.d("MPV: starting playback (pause=false)")
+                            logDebug("starting playback (pause=false)")
                             mpvLib.setPropertyBoolean("pause", false)
                         }
                         for (videoListener in videoListeners) {
@@ -844,9 +878,11 @@ class MPVPlayer(
     /** Prepares the player. */
     override fun prepare() {
         Timber.d("MPV: prepare(), items=%d", internalMediaItems.size)
+        logDebug("prepare() items=${internalMediaItems.size}")
         internalMediaItems.forEachIndexed { index, mediaItem ->
             val uri = "${mediaItem.localConfiguration?.uri}"
             Timber.d("MPV: loadfile[%d]: %s", index, if (uri.length > 80) uri.take(80) + "..." else uri)
+            logDebug("loadfile[$index] ${if (uri.length > 80) uri.take(80) + "..." else uri}")
             mpvLib.command(
                 arrayOf(
                     "loadfile",
@@ -1092,6 +1128,7 @@ class MPVPlayer(
      * player must not be used after calling this method.
      */
     override fun release() {
+        logDebug("release()")
         if (handleAudioFocus) {
             AudioManagerCompat.abandonAudioFocusRequest(audioManager, audioFocusRequest)
         }
@@ -1523,11 +1560,11 @@ class MPVPlayer(
              * @param holder The SurfaceHolder whose surface is being created.
              */
             override fun surfaceCreated(holder: SurfaceHolder) {
-                Timber.d("MPV: surfaceCreated, attaching surface")
+                logDebug("surfaceCreated, attaching surface")
                 mpvLib.attachSurface(holder.surface)
                 mpvLib.setOptionString("force-window", "yes")
                 mpvLib.setOptionString("vo", videoOutput)
-                Timber.d("MPV: surface attached, vo=%s", videoOutput)
+                logDebug("surface attached, vo=$voName")
             }
 
             /**
@@ -1546,7 +1583,7 @@ class MPVPlayer(
                 width: Int,
                 height: Int,
             ) {
-                Timber.d("MPV: surfaceChanged %dx%d", width, height)
+                logDebug("surfaceChanged ${width}x${height}")
                 mpvLib.setPropertyString("android-surface-size", "${width}x$height")
             }
 
@@ -1559,7 +1596,7 @@ class MPVPlayer(
              * @param holder The SurfaceHolder whose surface is being destroyed.
              */
             override fun surfaceDestroyed(holder: SurfaceHolder) {
-                Timber.d("MPV: surfaceDestroyed, disabling VO")
+                logDebug("surfaceDestroyed")
                 mpvLib.setOptionString("vo", "null")
                 mpvLib.setOptionString("force-window", "no")
                 mpvLib.detachSurface()
