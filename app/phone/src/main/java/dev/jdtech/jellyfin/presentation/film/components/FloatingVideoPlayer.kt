@@ -22,6 +22,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -36,10 +37,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
-import android.view.GestureDetector
+
 import android.view.MotionEvent
 import androidx.media3.common.VideoSize
 import kotlin.math.abs
@@ -80,6 +82,11 @@ fun FloatingVideoPlayer(
     var videoSize by remember { mutableStateOf<VideoSize?>(null) }
     var bitrateText by remember { mutableStateOf("") }
     var trafficText by remember { mutableStateOf("") }
+    var dragStartX by remember { mutableFloatStateOf(-1f) }
+    var dragActive by remember { mutableStateOf(false) }
+    var dragSeekPos by remember { mutableLongStateOf(0L) }
+    var dragStartPosition by remember { mutableLongStateOf(0L) }
+    var scrubTimeText by remember { mutableStateOf("") }
 
     LaunchedEffect(item.id) {
         val exoPlayer = ExoPlayer.Builder(context).build()
@@ -236,38 +243,65 @@ fun FloatingVideoPlayer(
                             useController = false
                             setShowNextButton(false)
                             setShowPreviousButton(false)
-                            setShowFastForwardButton(true)
-                            setShowRewindButton(true)
                             resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
 
-                            val gestureDetector = GestureDetector(ctx, object : GestureDetector.SimpleOnGestureListener() {
-                                override fun onScroll(e1: MotionEvent?, e2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
-                                    val dx = abs(e2.x - (e1?.x ?: e2.x))
-                                    val dy = abs(e2.y - (e1?.y ?: e2.y))
-                                    if (dx > dy && dx > 20f) {
-                                        isScrubbing = true
-                                        scrubFraction = (e2.x / width).coerceIn(0f, 1f)
-                                        return true
-                                    }
-                                    return false
-                                }
-                            })
-
                             setOnTouchListener { _, event ->
-                                gestureDetector.onTouchEvent(event)
                                 when (event.action) {
                                     MotionEvent.ACTION_DOWN -> {
+                                        dragStartX = event.x
+                                        dragActive = false
                                         isScrubbing = false
+                                        scrubTimeText = ""
+                                        val p = player
+                                        dragStartPosition = p?.currentPosition ?: 0L
+                                        true
+                                    }
+                                    MotionEvent.ACTION_MOVE -> {
+                                        if (dragStartX >= 0) {
+                                            val deltaX = event.x - dragStartX
+                                            if (!dragActive && abs(deltaX) > 30f) {
+                                                dragActive = true
+                                                isScrubbing = true
+                                            }
+                                            if (dragActive) {
+                                                val p = player ?: return@setOnTouchListener true
+                                                val duration = p.duration
+                                                if (duration > 0) {
+                                                    val seekMultiplier = duration.toFloat() / width.toFloat()
+                                                    val newPos = (dragStartPosition + (deltaX * seekMultiplier).toLong()).coerceIn(0, duration)
+                                                    dragSeekPos = newPos
+                                                    scrubFraction = newPos.toFloat() / duration.toFloat()
+                                                    val targetSec = newPos / 1000
+                                                    val currentSec = dragStartPosition / 1000
+                                                    val diffSec = targetSec - currentSec
+                                                    val sign = if (diffSec >= 0) "+" else ""
+                                                    scrubTimeText = when {
+                                                        duration >= 3600_000 -> "${sign}%02d:%02d:%02d [%02d:%02d:%02d]".format(
+                                                            abs(diffSec) / 3600, (abs(diffSec) % 3600) / 60, abs(diffSec) % 60,
+                                                            targetSec / 3600, (targetSec % 3600) / 60, targetSec % 60
+                                                        )
+                                                        else -> "${sign}%02d:%02d [%02d:%02d]".format(
+                                                            abs(diffSec) / 60, abs(diffSec) % 60,
+                                                            targetSec / 60, targetSec % 60
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        true
                                     }
                                     MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                                        if (isScrubbing) {
+                                        if (dragActive) {
                                             isScrubbing = false
-                                            val seekPos = (scrubFraction * (player?.duration ?: 0L)).toLong()
-                                            player?.seekTo(seekPos)
+                                            player?.seekTo(dragSeekPos)
+                                            dragActive = false
+                                            scrubTimeText = ""
                                         }
+                                        dragStartX = -1f
+                                        true
                                     }
+                                    else -> true
                                 }
-                                false
                             }
                         }
                     },
@@ -277,18 +311,35 @@ fun FloatingVideoPlayer(
                     modifier = Modifier.fillMaxSize(),
                 )
 
-                if (isScrubbing && trickplayInfo != null) {
+                if (isScrubbing) {
                     Popup(
                         alignment = Alignment.TopCenter,
-                        offset = IntOffset(0, with(LocalDensity.current) { (-200).dp.roundToPx() }),
+                        offset = IntOffset(0, with(LocalDensity.current) { 48.dp.roundToPx() }),
                         properties = PopupProperties(focusable = false),
+                        onDismissRequest = {},
                     ) {
-                        TrickplayPreview(
-                            item = item,
-                            trickplayInfo = trickplayInfo!!,
-                            scrubFraction = scrubFraction,
-                            repository = repository,
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            if (trickplayInfo != null) {
+                                TrickplayPreview(
+                                    item = item,
+                                    trickplayInfo = trickplayInfo!!,
+                                    scrubFraction = scrubFraction,
+                                    repository = repository,
+                                )
+                            }
+                            Text(
+                                text = scrubTimeText,
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                modifier = Modifier
+                                    .padding(top = 4.dp)
+                                    .background(
+                                        color = Color.Black.copy(alpha = 0.75f),
+                                        shape = RoundedCornerShape(4.dp),
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 3.dp),
+                            )
+                        }
                     }
                 }
             }

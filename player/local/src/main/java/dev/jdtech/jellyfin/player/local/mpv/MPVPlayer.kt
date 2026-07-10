@@ -67,6 +67,31 @@ class MPVPlayer(
     private lateinit var audioFocusRequest: AudioFocusRequestCompat
     private val handler: Handler = Handler(context.mainLooper)
 
+    // Debug log buffer
+    private val debugLog = java.util.Collections.synchronizedList(mutableListOf<String>())
+    private fun logDebug(msg: String) {
+        val sdf = java.text.SimpleDateFormat("HH:mm:ss.SSS", java.util.Locale.US)
+        val ts = sdf.format(java.util.Date())
+        debugLog.add("[$ts] $msg")
+        if (debugLog.size > 200) debugLog.removeAt(0)
+        Timber.tag("MPV").d(msg)
+    }
+
+    fun getDebugInfo(): String {
+        val sb = StringBuilder()
+        sb.appendLine("=== MPV Debug ===")
+        sb.appendLine("playWhenReady=$currentPlayWhenReady state=$playbackState")
+        sb.appendLine("ready=$isPlayerReady seekable=$isSeekable")
+        sb.appendLine("pos=${currentPositionMs}ms dur=${currentDurationMs}ms")
+        sb.appendLine("vo=$voName ao=$aoName hwdec=$hwdecName")
+        sb.appendLine("items=${internalMediaItems.size}")
+        sb.appendLine()
+        sb.appendLine("--- Log ---")
+        synchronized(debugLog) { for (l in debugLog) sb.appendLine(l) }
+        return sb.toString()
+    }
+
+
     private constructor(
         builder: Builder
     ) : this(
@@ -318,30 +343,6 @@ class MPVPlayer(
     private var initialIndex: Int = 0
     private var initialSeekTo: Long = 0L
     private var oldMediaItem: MediaItem? = null
-
-    // Debug log buffer
-    private val debugLog = java.util.Collections.synchronizedList(mutableListOf<String>())
-    private fun logDebug(msg: String) {
-        val sdf = java.text.SimpleDateFormat("HH:mm:ss.SSS", java.util.Locale.US)
-        val ts = sdf.format(java.util.Date())
-        debugLog.add("[$ts] $msg")
-        if (debugLog.size > 200) debugLog.removeAt(0)
-        Timber.tag("MPV").d(msg)
-    }
-
-    fun getDebugInfo(): String {
-        val sb = StringBuilder()
-        sb.appendLine("=== MPV Debug ===")
-        sb.appendLine("playWhenReady=$currentPlayWhenReady state=$playbackState")
-        sb.appendLine("ready=$isPlayerReady seekable=$isSeekable")
-        sb.appendLine("pos=${currentPositionMs}ms dur=${currentDurationMs}ms")
-        sb.appendLine("vo=$voName ao=$aoName hwdec=$hwdecName")
-        sb.appendLine("items=${internalMediaItems.size}")
-        sb.appendLine()
-        sb.appendLine("--- Log ---")
-        synchronized(debugLog) { for (l in debugLog) sb.appendLine(l) }
-        return sb.toString()
-    }
 
     // mpv events
     override fun eventProperty(property: String) {
