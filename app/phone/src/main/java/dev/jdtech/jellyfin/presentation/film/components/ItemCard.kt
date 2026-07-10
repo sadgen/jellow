@@ -66,8 +66,12 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/**
+ * Quick check: item 是否可能支持 trickplay（由服务端决定有没有数据）。
+ * 只需要是 FindroidSources（电影/剧集）即可——具体有没有帧由 TrickplayLoader 决定。
+ */
 private fun FindroidItem.canUseTrickplay(): Boolean {
-    return (this as? FindroidSources)?.trickplayInfo?.isNotEmpty() == true
+    return this is FindroidSources
 }
 
 @Composable
@@ -88,20 +92,23 @@ fun ItemCard(
             Direction.VERTICAL -> 150
         }
 
-    // Trickplay press-to-preview state
+    // Trickplay 预加载状态（卡片进入屏幕时就开始加载）
+    var trickplayFrames by remember { mutableStateOf<List<Bitmap>>(emptyList()) }
+    var isTrickplayLoaded by remember { mutableStateOf(false) }
+
+    // Popup 状态（仅控制显示/隐藏）
     var isPreviewShowing by remember { mutableStateOf(false) }
-    var previewFrames by remember { mutableStateOf<List<Bitmap>>(emptyList()) }
     var previewFrameIndex by remember { mutableIntStateOf(0) }
     var previewDragAccum by remember { mutableFloatStateOf(0f) }
     var cardPosition by remember { mutableStateOf(Offset.Zero) }
     val density = LocalDensity.current
 
-    // 长按时懒加载 trickplay 帧
-    if (isPreviewShowing && previewFrames.isEmpty() && repository != null) {
+    // 预加载：卡片进入屏幕时就开始加载 trickplay 帧
+    // LaunchedEffect 不会被后续的 Compositon 取消，因为条件是 item 级别的
+    if (item.canUseTrickplay() && repository != null && !isTrickplayLoaded) {
         TrickplayLoader(item = item, repository = repository) { frames ->
-            previewFrames = frames
-            previewFrameIndex = 0
-            previewDragAccum = 0f
+            trickplayFrames = frames
+            isTrickplayLoaded = true
         }
     }
 
@@ -121,17 +128,20 @@ fun ItemCard(
                 .pointerInput(item.id, repository) {
                     detectDragGesturesAfterLongPress(
                         onDragStart = {
-                            if (item.canUseTrickplay() && repository != null) {
+                            if (isTrickplayLoaded && trickplayFrames.isNotEmpty()) {
+                                // 帧已预加载好，立即显示 Popup
                                 isPreviewShowing = true
+                                previewFrameIndex = 0
+                                previewDragAccum = 0f
                             } else {
                                 onLongClick?.invoke()
                             }
                         },
                         onDrag = { change, dragAmount ->
                             change.consume()
-                            if (isPreviewShowing && previewFrames.isNotEmpty()) {
+                            if (isPreviewShowing && trickplayFrames.isNotEmpty()) {
                                 previewDragAccum += dragAmount.x
-                                val total = previewFrames.size
+                                val total = trickplayFrames.size
                                 if (total > 0) {
                                     val delta = (previewDragAccum / 40f).toInt()
                                     previewFrameIndex =
@@ -142,11 +152,9 @@ fun ItemCard(
                         },
                         onDragEnd = {
                             isPreviewShowing = false
-                            previewFrames = emptyList()
                         },
                         onDragCancel = {
                             isPreviewShowing = false
-                            previewFrames = emptyList()
                         },
                     )
                 }
@@ -252,7 +260,7 @@ fun ItemCard(
             }
         }
 
-        if (isPreviewShowing && previewFrames.isNotEmpty()) {
+        if (isPreviewShowing && trickplayFrames.isNotEmpty()) {
             val popupOffsetY = with(density) {
                 (cardPosition.y - 170.dp.toPx()).roundToInt()
             }
@@ -274,7 +282,7 @@ fun ItemCard(
                         .shadow(8.dp, MaterialTheme.shapes.medium)
                         .background(Color.Black),
                 ) {
-                    val frame = previewFrames[previewFrameIndex]
+                    val frame = trickplayFrames[previewFrameIndex]
                     Image(
                         painter = BitmapPainter(frame.asImageBitmap()),
                         contentDescription = null,
@@ -282,7 +290,7 @@ fun ItemCard(
                         modifier = Modifier.fillMaxSize(),
                     )
                     Text(
-                        text = "${previewFrameIndex + 1}/${previewFrames.size}",
+                        text = "${previewFrameIndex + 1}/${trickplayFrames.size}",
                         color = Color.White.copy(alpha = 0.7f),
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier
