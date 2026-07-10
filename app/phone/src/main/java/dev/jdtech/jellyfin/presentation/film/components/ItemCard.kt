@@ -1,7 +1,5 @@
 package dev.jdtech.jellyfin.presentation.film.components
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -11,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,49 +25,41 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.Image
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import dev.jdtech.jellyfin.core.R
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyEpisode
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyMovie
 import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidSources
+import dev.jdtech.jellyfin.models.FindroidTrickplayInfo
 import dev.jdtech.jellyfin.models.isDownloaded
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.repository.JellyfinRepository
-import kotlin.math.roundToInt
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 /**
- * Quick check: item 是否可能支持 trickplay（由服务端决定有没有数据）。
- * 只需要是 FindroidSources（电影/剧集）即可——具体有没有帧由 TrickplayLoader 决定。
+ * 检查 item 是否有潜在可能支持 trickplay（是电影/剧集即可）。
  */
 private fun FindroidItem.canUseTrickplay(): Boolean {
     return this is FindroidSources
@@ -92,253 +83,198 @@ fun ItemCard(
             Direction.VERTICAL -> 150
         }
 
-    // Trickplay 预加载状态（卡片进入屏幕时就开始加载）
-    var trickplayFrames by remember { mutableStateOf<List<Bitmap>>(emptyList()) }
-    var isTrickplayLoaded by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
-    // Popup 状态（仅控制显示/隐藏）
-    var isPreviewShowing by remember { mutableStateOf(false) }
-    var previewFrameIndex by remember { mutableIntStateOf(0) }
-    var previewDragAccum by remember { mutableFloatStateOf(0f) }
-    var cardPosition by remember { mutableStateOf(Offset.Zero) }
-    val density = LocalDensity.current
+    // Trickplay 状态
+    var isScrubbing by remember { mutableStateOf(false) }
+    var scrubFraction by remember { mutableFloatStateOf(0f) }
+    var trickplayInfo by remember { mutableStateOf<FindroidTrickplayInfo?>(null) }
+    var cardWidthPx by remember { mutableFloatStateOf(0f) }
+    var trickplayFetched by remember { mutableStateOf(false) }
 
-    // 预加载：卡片进入屏幕时就开始加载 trickplay 帧
-    // LaunchedEffect 不会被后续的 Compositon 取消，因为条件是 item 级别的
-    if (item.canUseTrickplay() && repository != null && !isTrickplayLoaded) {
-        TrickplayLoader(item = item, repository = repository) { frames ->
-            trickplayFrames = frames
-            isTrickplayLoaded = true
+    // 预加载 trickplayInfo：卡片进入时立即异步获取
+    if (item.canUseTrickplay() && repository != null && !trickplayFetched) {
+        LaunchedEffect(item.id) {
+            try {
+                val info = repository.getTrickplayInfoForItem(item.id)
+                trickplayInfo = info
+            } catch (_: Exception) {}
+            trickplayFetched = true
         }
     }
 
-    Box(
-        modifier = Modifier.onGloballyPositioned { coordinates ->
-            cardPosition = coordinates.positionInRoot()
-        }
-    ) {
-        Column(
-            modifier = modifier
-                .fillMaxWidth()
-                .width(width.dp)
-                .clip(MaterialTheme.shapes.small)
-                .pointerInput(item.id) {
-                    detectTapGestures(onTap = { onClick(item) })
-                }
-                .pointerInput(item.id, repository) {
-                    detectDragGesturesAfterLongPress(
-                        onDragStart = {
-                            if (isTrickplayLoaded && trickplayFrames.isNotEmpty()) {
-                                // 帧已预加载好，立即显示 Popup
-                                isPreviewShowing = true
-                                previewFrameIndex = 0
-                                previewDragAccum = 0f
-                            } else {
-                                onLongClick?.invoke()
-                            }
-                        },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            if (isPreviewShowing && trickplayFrames.isNotEmpty()) {
-                                previewDragAccum += dragAmount.x
-                                val total = trickplayFrames.size
-                                if (total > 0) {
-                                    val delta = (previewDragAccum / 40f).toInt()
-                                    previewFrameIndex =
-                                        ((previewFrameIndex + delta) % total + total) % total
-                                    previewDragAccum -= delta * 40f
-                                }
-                            }
-                        },
-                        onDragEnd = {
-                            isPreviewShowing = false
-                        },
-                        onDragCancel = {
-                            isPreviewShowing = false
-                        },
-                    )
-                }
-                .then(if (selected) Modifier.clip(MaterialTheme.shapes.small) else Modifier),
-        ) {
-            Surface(
-                shape = MaterialTheme.shapes.small,
-                color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-                border = if (isDuplicate) BorderStroke(2.dp, Color.Red) else null,
-            ) {
-                Box {
-                    ItemPoster(item = item, direction = direction)
-
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(MaterialTheme.spacings.small),
-                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
-                    ) {
-                        if (item.isDownloaded()) DownloadedBadge()
-                        if (item.played) PlayedBadge()
-                        if (item.playCount > 0) PlayCountBadge(count = item.playCount)
-                        item.unplayedItemCount?.takeIf { it > 0 }?.let { ItemCountBadge(it) }
-                    }
-                    if (direction == Direction.HORIZONTAL) {
-                        ProgressBar(
-                            item = item,
-                            width = width,
-                            modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .padding(MaterialTheme.spacings.small),
-                        )
-                    }
-
-                    if (selected) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .padding(MaterialTheme.spacings.small)
-                                .size(24.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Surface(shape = MaterialTheme.shapes.small, color = Color.Red) {
-                                Box(
-                                    modifier = Modifier.size(24.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_check),
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(16.dp),
-                                    )
-                                }
-                            }
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .width(width.dp)
+            .clip(MaterialTheme.shapes.small)
+            .onGloballyPositioned { coords ->
+                cardWidthPx = coords.size.width.toFloat()
+            }
+            .pointerInput(item.id) {
+                detectTapGestures(onTap = { onClick(item) })
+            }
+            .pointerInput(item.id, repository, trickplayFetched) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { startOffset ->
+                        // 计算手指在卡片上的位置比例（0~1）
+                        if (trickplayInfo != null && cardWidthPx > 0) {
+                            scrubFraction = (startOffset.x / cardWidthPx).coerceIn(0f, 1f)
+                            isScrubbing = true
+                        } else if (trickplayFetched && trickplayInfo == null) {
+                            // 服务端没有 trickplay 数据
+                            onLongClick?.invoke()
+                        } else {
+                            onLongClick?.invoke()
                         }
-                    }
-
-                    IconButton(
-                        onClick = { onPlayClick(item) },
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(MaterialTheme.spacings.small)
-                            .size(36.dp),
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_play),
-                            contentDescription = "Play",
-                            tint = Color.White.copy(alpha = 0.8f),
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
-                }
-            }
-            if (!isPreviewShowing) {
-                Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))
-                Text(
-                    text = if (item is FindroidEpisode) item.seriesName else item.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = if (item is FindroidEpisode) 1 else 2,
-                    overflow = TextOverflow.Ellipsis,
-                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
-                    else if (isDuplicate) Color.Red
-                    else MaterialTheme.colorScheme.onSurface,
+                    },
+                    onDrag = { change, _ ->
+                        if (isScrubbing && cardWidthPx > 0) {
+                            scrubFraction = (change.position.x / cardWidthPx).coerceIn(0f, 1f)
+                        }
+                    },
+                    onDragEnd = {
+                        isScrubbing = false
+                    },
+                    onDragCancel = {
+                        isScrubbing = false
+                    },
                 )
-                if (item is FindroidEpisode) {
-                    Text(
-                        text = stringResource(
-                            id = R.string.episode_name_extended,
-                            item.parentIndexNumber,
-                            item.indexNumber,
-                            item.name,
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                        else if (isDuplicate) Color.Red.copy(alpha = 0.8f)
-                        else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                Spacer(Modifier.height(2.dp))
             }
-        }
+            .then(if (selected) Modifier.clip(MaterialTheme.shapes.small) else Modifier),
+    ) {
+        Surface(
+            shape = MaterialTheme.shapes.small,
+            color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+            border = if (isDuplicate) BorderStroke(2.dp, Color.Red) else null,
+        ) {
+            Box {
+                ItemPoster(item = item, direction = direction)
 
-        if (isPreviewShowing && trickplayFrames.isNotEmpty()) {
-            val popupOffsetY = with(density) {
-                (cardPosition.y - 170.dp.toPx()).roundToInt()
-            }
-            Popup(
-                alignment = Alignment.TopStart,
-                offset = IntOffset(cardPosition.x.roundToInt(), popupOffsetY),
-                onDismissRequest = { },
-                properties = PopupProperties(
-                    focusable = false,
-                    dismissOnBackPress = false,
-                    dismissOnClickOutside = false,
-                ),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .width(280.dp)
-                        .height(160.dp)
-                        .clip(MaterialTheme.shapes.medium)
-                        .shadow(8.dp, MaterialTheme.shapes.medium)
-                        .background(Color.Black),
-                ) {
-                    val frame = trickplayFrames[previewFrameIndex]
-                    Image(
-                        painter = BitmapPainter(frame.asImageBitmap()),
-                        contentDescription = null,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                    Text(
-                        text = "${previewFrameIndex + 1}/${trickplayFrames.size}",
-                        color = Color.White.copy(alpha = 0.7f),
-                        style = MaterialTheme.typography.labelSmall,
+                // 正在 scrubbing 时的进度条
+                if (isScrubbing) {
+                    Box(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .padding(4.dp)
+                            .fillMaxWidth()
+                            .height(4.dp)
                             .background(Color.Black.copy(alpha = 0.5f))
-                            .padding(horizontal = 4.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(scrubFraction)
+                                .fillMaxHeight()
+                                .background(MaterialTheme.colorScheme.primary)
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(MaterialTheme.spacings.small),
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+                ) {
+                    if (item.isDownloaded()) DownloadedBadge()
+                    if (item.played) PlayedBadge()
+                    if (item.playCount > 0) PlayCountBadge(count = item.playCount)
+                    item.unplayedItemCount?.takeIf { it > 0 }?.let { ItemCountBadge(it) }
+                }
+                if (direction == Direction.HORIZONTAL) {
+                    ProgressBar(
+                        item = item,
+                        width = width,
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(MaterialTheme.spacings.small),
                     )
                 }
-            }
-        }
-    }
-}
 
-@Composable
-private fun TrickplayLoader(
-    item: FindroidItem,
-    repository: JellyfinRepository,
-    onLoaded: (List<Bitmap>) -> Unit,
-) {
-    LaunchedEffect(item.id) {
-        try {
-            val info = repository.getTrickplayInfoForItem(item.id) ?: return@LaunchedEffect
-            val maxIndex = kotlin.math.ceil(
-                info.thumbnailCount.toDouble()
-                    .div(info.tileWidth * info.tileHeight)
-            ).toInt()
-            val frameList = mutableListOf<Bitmap>()
-            for (i in 0..maxIndex) {
-                try {
-                    val data = repository.getTrickplayData(item.id, info.width, i) ?: continue
-                    withContext(Dispatchers.IO) {
-                        val fullBitmap = BitmapFactory.decodeByteArray(data, 0, data.size)
-                        if (fullBitmap != null) {
-                            for (offsetY in 0..<info.height * info.tileHeight step info.height) {
-                                for (offsetX in 0..<info.width * info.tileWidth step info.width) {
-                                    val frame = Bitmap.createBitmap(fullBitmap, offsetX, offsetY, info.width, info.height)
-                                    frameList.add(frame)
-                                    if (frameList.size >= info.thumbnailCount) break
-                                }
-                                if (frameList.size >= info.thumbnailCount) break
+                if (selected) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(MaterialTheme.spacings.small)
+                            .size(24.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Surface(shape = MaterialTheme.shapes.small, color = Color.Red) {
+                            Box(
+                                modifier = Modifier.size(24.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_check),
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp),
+                                )
                             }
                         }
                     }
-                } catch (_: Exception) { }
+                }
+
+                IconButton(
+                    onClick = { onPlayClick(item) },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(MaterialTheme.spacings.small)
+                        .size(36.dp),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_play),
+                        contentDescription = "Play",
+                        tint = Color.White.copy(alpha = 0.8f),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+
+                // Trickplay Popup
+                if (isScrubbing && trickplayInfo != null && repository != null) {
+                    Popup(
+                        alignment = Alignment.TopCenter,
+                        offset = IntOffset(0, with(LocalDensity.current) { (-200).dp.roundToPx() }),
+                        properties = PopupProperties(focusable = false),
+                    ) {
+                        TrickplayPreview(
+                            item = item,
+                            trickplayInfo = trickplayInfo!!,
+                            scrubFraction = scrubFraction,
+                            repository = repository,
+                        )
+                    }
+                }
             }
-            if (frameList.isNotEmpty()) onLoaded(frameList)
-        } catch (_: Exception) { }
+        }
+        if (!isScrubbing) {
+            Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))
+            Text(
+                text = if (item is FindroidEpisode) item.seriesName else item.name,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = if (item is FindroidEpisode) 1 else 2,
+                overflow = TextOverflow.Ellipsis,
+                color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                else if (isDuplicate) Color.Red
+                else MaterialTheme.colorScheme.onSurface,
+            )
+            if (item is FindroidEpisode) {
+                Text(
+                    text = stringResource(
+                        id = R.string.episode_name_extended,
+                        item.parentIndexNumber,
+                        item.indexNumber,
+                        item.name,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                    else if (isDuplicate) Color.Red.copy(alpha = 0.8f)
+                    else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Spacer(Modifier.height(2.dp))
+        }
     }
 }
 
