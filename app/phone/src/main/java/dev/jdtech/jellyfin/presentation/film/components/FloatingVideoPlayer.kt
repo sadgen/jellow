@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -39,8 +40,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 
 import android.view.MotionEvent
 import androidx.media3.common.VideoSize
@@ -160,14 +159,17 @@ fun FloatingVideoPlayer(
             if (now - lastTimeMs >= 1000) {
                 val bufferedUs = p.bufferedPosition
                 if (lastTimeMs > 0 && bufferedUs > lastBytes) {
-                    val deltaBytes = bufferedUs - lastBytes
+                    val deltaUs = bufferedUs - lastBytes
                     val deltaTime = (now - lastTimeMs) / 1000f
                     if (deltaTime > 0) {
-                        val speedMbps = (deltaBytes * 8f) / (deltaTime * 1_000_000f)
+                        val currentBitrate = p.videoFormat?.bitrate?.toLong() ?: 1_000_000L
+                        val deltaBytes = (deltaUs * currentBitrate) / (1_000_000L * 8)
+                        val speedBps = (deltaBytes * 8) / deltaTime
+                        val speedMbps = speedBps / 1_000_000f
                         if (speedMbps > 0.1f) {
                             trafficText = String.format("%.1f Mbps", speedMbps)
                         } else {
-                            val speedKBps = (deltaBytes) / (deltaTime * 1000f)
+                            val speedKBps = speedBps / 1000f
                             trafficText = String.format("%.0f KB/s", speedKBps)
                         }
                     }
@@ -209,19 +211,17 @@ fun FloatingVideoPlayer(
                             },
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        if (bitrateText.isNotEmpty() || trafficText.isNotEmpty()) {
-                            Text(
-                                text = buildString {
-                                    if (bitrateText.isNotEmpty()) append(bitrateText)
-                                    if (bitrateText.isNotEmpty() && trafficText.isNotEmpty()) append(" | ")
-                                    if (trafficText.isNotEmpty()) append(trafficText)
-                                },
-                                color = Color.White.copy(alpha = 0.7f),
-                                fontSize = 11.sp,
-                                maxLines = 1,
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
+                        Text(
+                            text = buildString {
+                                append(if (bitrateText.isNotEmpty()) bitrateText else "—")
+                                append(" | ")
+                                append(if (trafficText.isNotEmpty()) trafficText else "—")
+                            },
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = item.name,
                             color = Color.White,
@@ -332,19 +332,18 @@ fun FloatingVideoPlayer(
                     ) {
                         Box(
                             modifier = Modifier
+                                .fillMaxHeight()
                                 .fillMaxWidth(progress)
-                                .matchParentSize()
                                 .background(Color(0xFF00A8FF))
                         )
                     }
                 }
 
                 if (isScrubbing) {
-                    Popup(
-                        alignment = Alignment.TopCenter,
-                        offset = IntOffset(0, with(LocalDensity.current) { 48.dp.roundToPx() }),
-                        properties = PopupProperties(focusable = false),
-                        onDismissRequest = {},
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 8.dp)
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             if (trickplayInfo != null) {
