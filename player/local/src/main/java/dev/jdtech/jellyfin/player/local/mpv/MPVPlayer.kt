@@ -168,9 +168,6 @@ class MPVPlayer(
         // TLS
         mpvLib.setOptionString("tls-verify", "no")
 
-        // Debug logging
-        mpvLib.setOptionString("msg-level", "all=debug")
-
         // Cache
         mpvLib.setOptionString("cache", "yes")
         mpvLib.setOptionString("cache-pause-initial", "yes")

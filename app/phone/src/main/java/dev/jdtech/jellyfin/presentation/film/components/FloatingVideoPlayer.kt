@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -32,6 +34,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Popup
@@ -39,6 +42,7 @@ import androidx.compose.ui.window.PopupProperties
 import android.view.GestureDetector
 import android.view.MotionEvent
 import androidx.media3.common.VideoSize
+import kotlin.math.abs
 import kotlin.math.roundToInt
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -52,6 +56,8 @@ import dev.jdtech.jellyfin.models.FindroidSources
 import dev.jdtech.jellyfin.models.FindroidTrickplayInfo
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -72,6 +78,8 @@ fun FloatingVideoPlayer(
     var isScrubbing by remember { mutableStateOf(false) }
     var scrubFraction by remember { mutableFloatStateOf(0f) }
     var videoSize by remember { mutableStateOf<VideoSize?>(null) }
+    var bitrateText by remember { mutableStateOf("") }
+    var trafficText by remember { mutableStateOf("") }
 
     LaunchedEffect(item.id) {
         val exoPlayer = ExoPlayer.Builder(context).build()
@@ -118,6 +126,42 @@ fun FloatingVideoPlayer(
         }
     }
 
+    LaunchedEffect(player) {
+        var lastBytes = 0L
+        var lastTimeMs = 0L
+        while (isActive) {
+            delay(1000)
+            val p = player ?: continue
+            val format = p.videoFormat
+            if (format != null && format.bitrate > 0) {
+                bitrateText = if (format.bitrate >= 1_000_000) {
+                    String.format("%.1f Mbps", format.bitrate / 1_000_000f)
+                } else {
+                    "${format.bitrate / 1_000} Kbps"
+                }
+            } else {
+                bitrateText = ""
+            }
+            val bufferedUs = p.bufferedPosition
+            val currTimeMs = System.currentTimeMillis()
+            if (lastTimeMs > 0 && bufferedUs > lastBytes) {
+                val deltaBytes = bufferedUs - lastBytes
+                val deltaTime = (currTimeMs - lastTimeMs) / 1000f
+                if (deltaTime > 0) {
+                    val speedMbps = (deltaBytes * 8f) / (deltaTime * 1_000_000f)
+                    if (speedMbps > 0.1f) {
+                        trafficText = String.format("%.1f Mbps", speedMbps)
+                    } else {
+                        val speedKBps = (deltaBytes) / (deltaTime * 1000f)
+                        trafficText = String.format("%.0f KB/s", speedKBps)
+                    }
+                }
+            }
+            lastBytes = bufferedUs
+            lastTimeMs = currTimeMs
+        }
+    }
+
     val aspectRatio = remember(videoSize) {
         if (videoSize != null && videoSize!!.width > 0 && videoSize!!.height > 0) {
             videoSize!!.width.toFloat() / videoSize!!.height.toFloat()
@@ -149,6 +193,19 @@ fun FloatingVideoPlayer(
                             },
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        if (bitrateText.isNotEmpty() || trafficText.isNotEmpty()) {
+                            Text(
+                                text = buildString {
+                                    if (bitrateText.isNotEmpty()) append(bitrateText)
+                                    if (bitrateText.isNotEmpty() && trafficText.isNotEmpty()) append(" | ")
+                                    if (trafficText.isNotEmpty()) append(trafficText)
+                                },
+                                color = Color.White.copy(alpha = 0.7f),
+                                fontSize = 11.sp,
+                                maxLines = 1,
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                         Text(
                             text = item.name,
                             color = Color.White,
@@ -185,21 +242,30 @@ fun FloatingVideoPlayer(
 
                             val gestureDetector = GestureDetector(ctx, object : GestureDetector.SimpleOnGestureListener() {
                                 override fun onScroll(e1: MotionEvent?, e2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
-                                    kotlin.math.abs(distanceX).let { if (it > kotlin.math.abs(distanceY) && it > 2f) {
+                                    val dx = abs(e2.x - (e1?.x ?: e2.x))
+                                    val dy = abs(e2.y - (e1?.y ?: e2.y))
+                                    if (dx > dy && dx > 20f) {
                                         isScrubbing = true
                                         scrubFraction = (e2.x / width).coerceIn(0f, 1f)
                                         return true
-                                    }}
+                                    }
                                     return false
                                 }
                             })
 
                             setOnTouchListener { _, event ->
                                 gestureDetector.onTouchEvent(event)
-                                if (event.action == MotionEvent.ACTION_UP && isScrubbing) {
-                                    isScrubbing = false
-                                    val seekPos = (scrubFraction * (player?.duration ?: 0L)).toLong()
-                                    player?.seekTo(seekPos)
+                                when (event.action) {
+                                    MotionEvent.ACTION_DOWN -> {
+                                        isScrubbing = false
+                                    }
+                                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                                        if (isScrubbing) {
+                                            isScrubbing = false
+                                            val seekPos = (scrubFraction * (player?.duration ?: 0L)).toLong()
+                                            player?.seekTo(seekPos)
+                                        }
+                                    }
                                 }
                                 false
                             }
