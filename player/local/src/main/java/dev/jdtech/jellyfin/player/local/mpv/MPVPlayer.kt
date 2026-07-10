@@ -54,9 +54,9 @@ class MPVPlayer(
     private val seekBackIncrement: Long = C.DEFAULT_SEEK_BACK_INCREMENT_MS,
     private val seekForwardIncrement: Long = C.DEFAULT_SEEK_FORWARD_INCREMENT_MS,
     private val pauseAtEndOfMediaItems: Boolean = false,
-    videoOutput: String = "gpu-next",
+    videoOutput: String = "gpu",
     audioOutput: String = "aaudio",
-    hwDec: String = "mediacodec",
+    hwDec: String = "mediacodec,mediacodec-copy",
 ) : BasePlayer(), MPVLib.EventObserver, AudioManager.OnAudioFocusChangeListener {
     private val mpvLib: MPVLib
     private val audioManager: AudioManager by lazy { context.getSystemService()!! }
@@ -98,13 +98,13 @@ class MPVPlayer(
         var pauseAtEndOfMediaItems: Boolean = false
             private set
 
-        var videoOutput: String = "gpu-next"
+        var videoOutput: String = "gpu"
             private set
 
         var audioOutput: String = "aaudio"
             private set
 
-        var hwDec: String = "mediacodec"
+        var hwDec: String = "mediacodec,mediacodec-copy"
             private set
 
         fun setAudioAttributes(audioAttributes: AudioAttributes, handleAudioFocus: Boolean) =

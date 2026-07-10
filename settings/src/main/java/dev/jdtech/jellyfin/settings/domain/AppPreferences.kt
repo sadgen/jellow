@@ -29,8 +29,8 @@ class AppPreferences @Inject constructor(val sharedPreferences: SharedPreference
     val playerVrProjection = Preference("pref_player_vr_projection", "360_2D")
 
     // Player - mpv
-    val playerMpvHwdec = Preference("pref_player_mpv_hwdec", "mediacodec")
-    val playerMpvVo = Preference("pref_player_mpv_vo", "gpu-next")
+    val playerMpvHwdec = Preference("pref_player_mpv_hwdec", "mediacodec,mediacodec-copy")
+    val playerMpvVo = Preference("pref_player_mpv_vo", "gpu")
     val playerMpvAo = Preference("pref_player_mpv_ao", "aaudio")
 
     // Player - transcoding
