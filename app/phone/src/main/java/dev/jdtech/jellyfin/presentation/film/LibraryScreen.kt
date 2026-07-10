@@ -36,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -62,6 +63,7 @@ import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.presentation.components.ErrorDialog
 import dev.jdtech.jellyfin.presentation.film.components.Direction
 import dev.jdtech.jellyfin.presentation.film.components.ErrorCard
+import dev.jdtech.jellyfin.presentation.film.components.FloatingVideoPlayer
 import dev.jdtech.jellyfin.presentation.film.components.ItemCard
 import dev.jdtech.jellyfin.presentation.film.components.SortByDialog
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
@@ -144,6 +146,7 @@ private fun LibraryScreenLayout(
     
     // 添加状态以控制菜单显示
     var showMenu by remember { mutableStateOf(false) }
+    var floatingVideoItem by remember { mutableStateOf<FindroidItem?>(null) }
 
     Scaffold(
         topBar = {
@@ -309,7 +312,7 @@ private fun LibraryScreenLayout(
                                         }
                                     },
                                     onPlayClick = {
-                                        onAction(LibraryAction.OnPlayClick(item))
+                                        floatingVideoItem = item
                                     },
                                     repository = repository,
                                     selected = state.selectionMode && item in state.selectedItems,
@@ -352,7 +355,7 @@ private fun LibraryScreenLayout(
                                         }
                                     },
                                     onPlayClick = {
-                                        onAction(LibraryAction.OnPlayClick(item))
+                                        floatingVideoItem = item
                                     },
                                     repository = repository,
                                     selected = state.selectionMode && item in state.selectedItems,
@@ -372,6 +375,15 @@ private fun LibraryScreenLayout(
                         .fillMaxSize()
                         .graphicsLayer(alpha = 0.2f)
                         .background(Color.Black)
+                )
+            }
+
+            floatingVideoItem?.let { item ->
+                FloatingVideoPlayer(
+                    item = item,
+                    repository = repository ?: return@let,
+                    onDismiss = { floatingVideoItem = null },
+                    modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
         }
