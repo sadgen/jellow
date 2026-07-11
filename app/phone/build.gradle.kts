@@ -61,7 +61,6 @@ android {
         }
         register("jellow") {
             dimension = "variant"
-            versionNameSuffix = "-jellow"
         }
     }
 
