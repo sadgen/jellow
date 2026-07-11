@@ -19,8 +19,9 @@ import kotlinx.coroutines.launch
 import org.jellyfin.sdk.model.api.BaseItemKind
 
 @HiltViewModel
-class PersonViewModel @Inject internal constructor(private val repository: JellyfinRepository) :
+class PersonViewModel @Inject internal constructor(private val repo: JellyfinRepository) :
     ViewModel() {
+    val repository: JellyfinRepository get() = repo
     private val _state = MutableStateFlow(PersonState())
     val state = _state.asStateFlow()
 

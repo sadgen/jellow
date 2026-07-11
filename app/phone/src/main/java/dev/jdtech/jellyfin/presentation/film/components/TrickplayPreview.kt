@@ -26,7 +26,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.jdtech.jellyfin.models.FindroidItem
-import dev.jdtech.jellyfin.models.FindroidSources
 import dev.jdtech.jellyfin.models.FindroidTrickplayInfo
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import kotlinx.coroutines.Dispatchers
@@ -43,19 +42,15 @@ fun TrickplayPreview(
     item: FindroidItem,
     trickplayInfo: FindroidTrickplayInfo,
     scrubFraction: Float,
-    repository: JellyfinRepository,
+    trickplayFrames: List<Bitmap>,
+    repository: JellyfinRepository? = null,
     modifier: Modifier = Modifier,
 ) {
     val runtimeTicks = item.runtimeTicks
     val durationMs = runtimeTicks / 10_000
     val intervalMs = trickplayInfo.interval.toLong()
     val totalTiles = (durationMs / intervalMs).toInt().coerceAtLeast(1)
-    val tilesPerSprite = trickplayInfo.tileWidth * trickplayInfo.tileHeight
     val tileIndex = (scrubFraction * totalTiles).toInt().coerceIn(0, totalTiles - 1)
-    val spriteIndex = tileIndex / tilesPerSprite
-    val tileInSprite = tileIndex % tilesPerSprite
-    val col = tileInSprite % trickplayInfo.tileWidth
-    val row = tileInSprite / trickplayInfo.tileWidth
 
     // 当前时间戳
     val seekTimeSec = (scrubFraction * runtimeTicks / 10_000_000).toLong()
@@ -65,35 +60,35 @@ fun TrickplayPreview(
 
     var tileBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
-    // 缓存 sprite sheet 避免重复下载
-    var cachedSpriteIndex by remember { mutableStateOf(-1) }
-    var cachedSpriteBitmap by remember { mutableStateOf<Bitmap?>(null) }
-
-    LaunchedEffect(spriteIndex, tileInSprite) {
-        delay(80) // 防抖：防止快速拖动时频繁取消网络请求
-        withContext(Dispatchers.IO) {
-            try {
-                val spriteBitmap = if (spriteIndex == cachedSpriteIndex && cachedSpriteBitmap != null) {
-                    cachedSpriteBitmap!!
-                } else {
+    LaunchedEffect(tileIndex) {
+        if (tileIndex in trickplayFrames.indices) {
+            // Fast path: pre-extracted frame, instant
+            tileBitmap = trickplayFrames[tileIndex]
+        } else if (repository != null) {
+            // Fallback: on-demand sprite fetch (ItemCard path)
+            delay(80)
+            withContext(Dispatchers.IO) {
+                try {
+                    val tilesPerSprite = trickplayInfo.tileWidth * trickplayInfo.tileHeight
+                    val spriteIndex = tileIndex / tilesPerSprite
+                    val tileInSprite = tileIndex % tilesPerSprite
+                    val col = tileInSprite % trickplayInfo.tileWidth
+                    val row = tileInSprite / trickplayInfo.tileWidth
                     val data = repository.getTrickplayData(item.id, trickplayInfo.width, spriteIndex)
                         ?: return@withContext
-                    val bitmap = BitmapFactory.decodeByteArray(data, 0, data.size)
+                    val spriteBitmap = BitmapFactory.decodeByteArray(data, 0, data.size)
                         ?: return@withContext
-                    cachedSpriteBitmap = bitmap
-                    cachedSpriteIndex = spriteIndex
-                    bitmap
-                }
-
-                val tileW = trickplayInfo.width
-                val tileH = trickplayInfo.height
-                val x = col * tileW
-                val y = row * tileH
-
-                if (x + tileW <= spriteBitmap.width && y + tileH <= spriteBitmap.height) {
-                    tileBitmap = Bitmap.createBitmap(spriteBitmap, x, y, tileW, tileH)
-                }
-            } catch (_: Exception) {}
+                    withContext(Dispatchers.Main) {
+                        val tileW = trickplayInfo.width
+                        val tileH = trickplayInfo.height
+                        val x = col * tileW
+                        val y = row * tileH
+                        if (x + tileW <= spriteBitmap.width && y + tileH <= spriteBitmap.height) {
+                            tileBitmap = Bitmap.createBitmap(spriteBitmap, x, y, tileW, tileH)
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
         }
     }
 

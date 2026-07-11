@@ -42,6 +42,7 @@ import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidMovie
 import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidShow
+import dev.jdtech.jellyfin.models.isVrItem
 import org.jellyfin.sdk.model.api.BaseItemKind
 import dev.jdtech.jellyfin.presentation.film.CollectionScreen
 import dev.jdtech.jellyfin.presentation.film.DownloadsScreen
@@ -331,6 +332,9 @@ fun NavigationRoot(
                         val intent = Intent(context, PlayerActivity::class.java)
                         intent.putExtra("itemId", item.id.toString())
                         intent.putExtra("itemKind", itemKind?.serialName ?: "")
+                        if (item.isVrItem()) {
+                            intent.putExtra("startInVr", true)
+                        }
                         context.startActivity(intent)
                     },
                     onPersonClick = { personId ->
@@ -470,21 +474,6 @@ fun NavigationRoot(
                     navigateHome = { navigateHome(navController) },
                     navigateToItem = { item ->
                         navigateToItem(navController = navController, item = item)
-                    },
-                    onPlayClick = { item ->
-                        val itemKind = when (item) {
-                            is FindroidMovie -> BaseItemKind.MOVIE
-                            is FindroidEpisode -> BaseItemKind.EPISODE
-                            is FindroidSeason -> BaseItemKind.SEASON
-                            is FindroidShow -> BaseItemKind.SERIES
-                            is FindroidBoxSet -> BaseItemKind.BOX_SET
-                            is FindroidFolder -> BaseItemKind.FOLDER
-                            else -> null
-                        }
-                        val intent = Intent(context, PlayerActivity::class.java)
-                        intent.putExtra("itemId", item.id.toString())
-                        intent.putExtra("itemKind", itemKind?.serialName ?: "")
-                        context.startActivity(intent)
                     },
                 )
             }

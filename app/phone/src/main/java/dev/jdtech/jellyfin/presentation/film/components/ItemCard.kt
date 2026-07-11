@@ -45,6 +45,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import dev.jdtech.jellyfin.core.R
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyEpisode
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyMovie
@@ -56,7 +58,9 @@ import dev.jdtech.jellyfin.models.isDownloaded
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.repository.JellyfinRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 检查 item 是否有潜在可能支持 trickplay（是电影/剧集即可）。
@@ -89,6 +93,7 @@ fun ItemCard(
     var isScrubbing by remember { mutableStateOf(false) }
     var scrubFraction by remember { mutableFloatStateOf(0f) }
     var trickplayInfo by remember { mutableStateOf<FindroidTrickplayInfo?>(null) }
+    var trickplayFrames by remember { mutableStateOf<List<Bitmap>>(emptyList()) }
     var cardWidthPx by remember { mutableFloatStateOf(0f) }
     var trickplayFetched by remember { mutableStateOf(false) }
 
@@ -100,6 +105,39 @@ fun ItemCard(
                 trickplayInfo = info
             } catch (_: Exception) {}
             trickplayFetched = true
+        }
+    }
+
+    // 长按拖动时预加载所有 trickplay 单帧
+    LaunchedEffect(isScrubbing) {
+        if (!isScrubbing) return@LaunchedEffect
+        val info = trickplayInfo ?: return@LaunchedEffect
+        if (repository == null) return@LaunchedEffect
+        if (trickplayFrames.isNotEmpty()) return@LaunchedEffect  // 已加载过
+
+        withContext(Dispatchers.IO) {
+            val totalTiles = item.runtimeTicks.let { ticks ->
+                ((ticks / 10_000) / info.interval.toLong()).toInt().coerceAtLeast(1)
+            }
+            val tilesPerSprite = info.tileWidth * info.tileHeight
+            val totalSprites = (totalTiles + tilesPerSprite - 1) / tilesPerSprite
+
+            val frames = mutableListOf<Bitmap>()
+            for (i in 0 until totalSprites) {
+                try {
+                    val data = repository!!.getTrickplayData(item.id, info.width, i) ?: continue
+                    val fullBitmap = BitmapFactory.decodeByteArray(data, 0, data.size) ?: continue
+                    for (offsetY in 0 until info.height * info.tileHeight step info.height) {
+                        for (offsetX in 0 until info.width * info.tileWidth step info.width) {
+                            if (frames.size >= totalTiles) break
+                            val tile = Bitmap.createBitmap(fullBitmap, offsetX, offsetY, info.width, info.height)
+                            frames.add(tile)
+                        }
+                        if (frames.size >= totalTiles) break
+                    }
+                } catch (_: Exception) {}
+            }
+            trickplayFrames = frames
         }
     }
 
@@ -240,6 +278,7 @@ fun ItemCard(
                             item = item,
                             trickplayInfo = trickplayInfo!!,
                             scrubFraction = scrubFraction,
+                            trickplayFrames = trickplayFrames,
                             repository = repository,
                         )
                     }

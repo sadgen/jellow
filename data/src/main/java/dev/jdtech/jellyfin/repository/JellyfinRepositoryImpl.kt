@@ -32,6 +32,8 @@ import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import java.io.File
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -327,12 +329,39 @@ class JellyfinRepositoryImpl(
                 imageTypeLimit = 1,
                 enableImageTypes = listOf(ImageType.PRIMARY),
                 userId = jellyfinApi.userId,
+                personTypes = listOf("Actor"),
+                isFavorite = true,
             )
-            jellyfinApi.personsApi
+            val persons = jellyfinApi.personsApi
                 .getPersons(request)
                 .content
                 .items
                 .mapNotNull { it.toFindroidPerson(this@JellyfinRepositoryImpl) }
+
+            // Jellyfin Persons API 不返回真实的作品计数（movieCount 等字段始终为 null），
+            // 需要用 Items API 按 personIds 逐个查询
+            val userId = jellyfinApi.userId ?: return@withContext persons
+            val countResults = persons.map { person ->
+                async {
+                    try {
+                        val result = jellyfinApi.itemsApi.getItems(
+                            userId = userId,
+                            personIds = listOf(person.id),
+                            recursive = true,
+                            limit = 1,
+                            includeItemTypes = listOf(BaseItemKind.MOVIE, BaseItemKind.EPISODE),
+                        )
+                        person.id to (result.content.totalRecordCount ?: 0)
+                    } catch (e: Exception) {
+                        person.id to person.itemCount
+                    }
+                }
+            }.awaitAll().toMap()
+
+            persons.map { person ->
+                val realCount = countResults[person.id] ?: person.itemCount
+                person.copy(itemCount = realCount)
+            }
         }
 
     override suspend fun getSeasons(seriesId: UUID, offline: Boolean): List<FindroidSeason> =

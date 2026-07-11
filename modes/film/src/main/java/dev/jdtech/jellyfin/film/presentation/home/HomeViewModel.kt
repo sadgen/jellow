@@ -128,8 +128,10 @@ constructor(
     private suspend fun loadPersons() {
         Timber.i("Loading persons")
         try {
-            val persons = repository.getPersons(limit = 30)
+            // 取喜爱的演员，按作品数降序排列
+            val persons = repository.getPersons(limit = 50)
                 .sortedByDescending { it.itemCount }
+                .take(30)
             _state.emit(_state.value.copy(persons = persons))
         } catch (e: Exception) {
             Timber.e(e, "Failed to load persons")

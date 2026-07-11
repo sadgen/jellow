@@ -47,11 +47,20 @@ import dev.jdtech.jellyfin.core.presentation.dummy.dummyPersonDetail
 import dev.jdtech.jellyfin.film.presentation.person.PersonAction
 import dev.jdtech.jellyfin.film.presentation.person.PersonState
 import dev.jdtech.jellyfin.film.presentation.person.PersonViewModel
+import dev.jdtech.jellyfin.models.FindroidBoxSet
+import dev.jdtech.jellyfin.models.FindroidEpisode
+import dev.jdtech.jellyfin.models.FindroidFolder
 import dev.jdtech.jellyfin.models.FindroidItem
+import dev.jdtech.jellyfin.models.FindroidMovie
 import dev.jdtech.jellyfin.models.FindroidPerson
+import dev.jdtech.jellyfin.models.FindroidSeason
+import dev.jdtech.jellyfin.models.FindroidShow
 import dev.jdtech.jellyfin.models.SortBy
 import dev.jdtech.jellyfin.models.SortOrder
+import dev.jdtech.jellyfin.models.isVrItem
+import dev.jdtech.jellyfin.PlayerActivity
 import dev.jdtech.jellyfin.presentation.film.components.Direction
+import dev.jdtech.jellyfin.presentation.film.components.FloatingVideoPlayer
 import dev.jdtech.jellyfin.presentation.film.components.ItemCard
 import dev.jdtech.jellyfin.presentation.film.components.ItemTopBar
 import dev.jdtech.jellyfin.presentation.film.components.OverviewText
@@ -59,6 +68,12 @@ import dev.jdtech.jellyfin.presentation.film.components.SortByDialog
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.presentation.utils.rememberSafePadding
+import dev.jdtech.jellyfin.repository.JellyfinRepository
+import android.content.Intent
+import androidx.compose.runtime.key
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import org.jellyfin.sdk.model.api.BaseItemKind
 import java.util.UUID
 
 @Composable
@@ -71,17 +86,41 @@ fun PersonScreen(
     viewModel: PersonViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(true) { viewModel.loadPerson(personId) }
 
     PersonScreenLayout(
         state = state,
+        repository = viewModel.repository,
         onAction = { action ->
             when (action) {
                 is PersonAction.NavigateBack -> navigateBack()
                 is PersonAction.NavigateHome -> navigateHome()
                 is PersonAction.NavigateToItem -> navigateToItem(action.item)
-                is PersonAction.OnPlayClick -> onPlayClick(action.item)
+                is PersonAction.OnPlayClick -> {
+                    if (action.item.isVrItem()) {
+                        val itemKind = when (action.item) {
+                            is FindroidMovie -> BaseItemKind.MOVIE
+                            is FindroidEpisode -> BaseItemKind.EPISODE
+                            is FindroidSeason -> BaseItemKind.SEASON
+                            is FindroidShow -> BaseItemKind.SERIES
+                            is FindroidBoxSet -> BaseItemKind.BOX_SET
+                            is FindroidFolder -> BaseItemKind.FOLDER
+                            else -> null
+                        }
+                        val intent = Intent(context, PlayerActivity::class.java).apply {
+                            putExtra("itemId", action.item.id.toString())
+                            putExtra("itemKind", itemKind?.serialName ?: "")
+                            putExtra("startInVr", true)
+                            putExtra("startFromBeginning", true)
+                            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        }
+                        context.startActivity(intent)
+                    } else {
+                        onPlayClick(action.item)
+                    }
+                }
                 else -> Unit
             }
             viewModel.onAction(action)
@@ -91,7 +130,11 @@ fun PersonScreen(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> Unit) {
+private fun PersonScreenLayout(
+    state: PersonState,
+    repository: JellyfinRepository?,
+    onAction: (PersonAction) -> Unit,
+) {
     val safePadding = rememberSafePadding()
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
 
@@ -103,6 +146,32 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
     val itemsPadding = PaddingValues(start = paddingStart, end = paddingEnd)
     
     var showSortByDialog by rememberSaveable { mutableStateOf(false) }
+
+    data class FloatingWindowInfo(
+        val item: FindroidItem,
+        val initialOffsetY: Float? = null,
+    )
+
+    var floatingWindows by remember { mutableStateOf(listOf<FloatingWindowInfo>()) }
+    val density = LocalDensity.current
+
+    fun openFloatingWindow(item: FindroidItem) {
+        if (floatingWindows.size >= 3) {
+            val updated = floatingWindows.toMutableList()
+            updated.removeFirst()
+            floatingWindows = updated
+        }
+        val baseOffset: Float = with(density) { 120.dp.toPx() }
+        val lastOffset = if (floatingWindows.isEmpty()) baseOffset
+                         else floatingWindows.last().initialOffsetY ?: baseOffset
+        val newOffset = lastOffset + with(density) { 60.dp.toPx() }
+        val newWindow = FloatingWindowInfo(item = item, initialOffsetY = newOffset)
+        floatingWindows = floatingWindows + newWindow
+    }
+
+    fun closeFloatingWindow(item: FindroidItem) {
+        floatingWindows = floatingWindows.filter { it.item.id != item.id }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         state.person?.let { person ->
@@ -177,7 +246,7 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
                             items = state.starredInMovies,
                             isListView = state.isListView,
                             onItemClick = { onAction(PersonAction.NavigateToItem(it)) },
-                            onPlayClick = { onAction(PersonAction.OnPlayClick(it)) },
+                            onPlayClick = { openFloatingWindow(it) },
                         )
                     }
 
@@ -191,7 +260,7 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
                             items = state.starredInShows,
                             isListView = state.isListView,
                             onItemClick = { onAction(PersonAction.NavigateToItem(it)) },
-                            onPlayClick = { onAction(PersonAction.OnPlayClick(it)) },
+                            onPlayClick = { openFloatingWindow(it) },
                         )
                     }
                 }
@@ -206,6 +275,18 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
             onBackClick = { onAction(PersonAction.NavigateBack) },
             onHomeClick = { onAction(PersonAction.NavigateHome) },
         )
+
+        floatingWindows.forEach { window ->
+            key(window.item.id) {
+                FloatingVideoPlayer(
+                    item = window.item,
+                    repository = repository ?: return@forEach,
+                    onDismiss = { closeFloatingWindow(window.item) },
+                    initialOffsetY = window.initialOffsetY,
+                    modifier = Modifier.align(Alignment.TopCenter),
+                )
+            }
+        }
     }
 
     if (showSortByDialog) {
@@ -303,6 +384,7 @@ private fun PersonScreenLayoutPreview() {
     FindroidTheme {
         PersonScreenLayout(
             state = PersonState(person = dummyPersonDetail, starredInMovies = dummyMovies),
+            repository = null,
             onAction = {},
         )
     }

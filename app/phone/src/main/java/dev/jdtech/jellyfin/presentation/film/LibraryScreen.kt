@@ -65,6 +65,7 @@ import dev.jdtech.jellyfin.models.FindroidBoxSet
 import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.models.FindroidFolder
 import dev.jdtech.jellyfin.models.FindroidItem
+import dev.jdtech.jellyfin.models.isVrItem
 import dev.jdtech.jellyfin.models.FindroidMovie
 import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidShow
@@ -351,7 +352,7 @@ private fun LibraryScreenLayout(
                                             }
                                         },
                                         onPlayClick = { clickedItem ->
-                                            if (clickedItem.name.contains("vr", ignoreCase = true)) {
+                                            if (clickedItem.isVrItem()) {
                                                 val itemKind = when (clickedItem) {
                                                     is FindroidMovie -> BaseItemKind.MOVIE
                                                     is FindroidEpisode -> BaseItemKind.EPISODE
@@ -414,7 +415,7 @@ private fun LibraryScreenLayout(
                                             }
                                         },
                                         onPlayClick = { clickedItem ->
-                                            if (clickedItem.name.contains("vr", ignoreCase = true)) {
+                                            if (clickedItem.isVrItem()) {
                                                 val itemKind = when (clickedItem) {
                                                     is FindroidMovie -> BaseItemKind.MOVIE
                                                     is FindroidEpisode -> BaseItemKind.EPISODE

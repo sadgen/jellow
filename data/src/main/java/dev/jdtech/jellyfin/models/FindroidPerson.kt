@@ -18,6 +18,6 @@ fun BaseItemDto.toFindroidPerson(repository: JellyfinRepository): FindroidPerson
         name = name.orEmpty(),
         overview = overview.orEmpty(),
         images = toFindroidImages(repository),
-        itemCount = movieCount ?: recursiveItemCount ?: childCount ?: 0,
+        itemCount = movieCount ?: seriesCount ?: episodeCount ?: recursiveItemCount ?: childCount ?: 0,
     )
 }

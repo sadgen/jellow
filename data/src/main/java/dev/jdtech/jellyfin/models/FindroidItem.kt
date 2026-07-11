@@ -51,3 +51,15 @@ fun FindroidItem.isDownloaded(): Boolean {
         .filter { it.type == FindroidSourceType.LOCAL }
         .any { !it.path.endsWith(".download") }
 }
+
+/**
+ * 检测该视频是否为 VR / 360° / 全景视频
+ * 基于多种关键词匹配，因为 Jellyfin 服务端没有专门的 VR 标记位
+ */
+fun FindroidItem.isVrItem(): Boolean {
+    val vrKeywords = listOf("vr", "360", "panorama", "全景", "spherical", "3d")
+    return vrKeywords.any { keyword ->
+        name.contains(keyword, ignoreCase = true) ||
+        originalTitle?.contains(keyword, ignoreCase = true) == true
+    }
+}
